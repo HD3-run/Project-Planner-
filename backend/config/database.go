@@ -45,6 +45,10 @@ func ConnectDatabase() {
 
 // seedInitialData ensures the database isn't completely empty on first launch
 func seedInitialData() {
+	// 1. One-time Cleanup of existing duplicates (PostgreSQL specific)
+	log.Println("Cleaning up any existing duplicate features...")
+	DB.Exec("DELETE FROM features a USING features b WHERE a.id < b.id AND a.title = b.title AND a.section_id = b.section_id")
+
 	var count int64
 	DB.Model(&models.Section{}).Count(&count)
 	

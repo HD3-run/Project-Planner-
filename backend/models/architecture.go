@@ -14,8 +14,8 @@ type Section struct {
 // Feature represents an individual item within a section
 type Feature struct {
 	ID           uint   `gorm:"primaryKey"`
-	SectionID    string `gorm:"index;not null"`
-	Title        string `gorm:"not null"`
+	SectionID    string `gorm:"index:idx_feature_unique,unique;not null"`
+	Title        string `gorm:"index:idx_feature_unique,unique;not null"`
 	Icon         string `gorm:"default:'📦'"`
 	Status       string `gorm:"default:'live'"`
 	TagExtra     string
