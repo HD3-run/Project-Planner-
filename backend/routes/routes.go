@@ -14,6 +14,8 @@ func SetupRouter() *http.ServeMux {
 	// Public Routes
 	mux.HandleFunc("/api/signup", controllers.HandleSignup)
 	mux.HandleFunc("/api/login", controllers.HandleLogin)
+	mux.HandleFunc("/api/refresh", controllers.HandleRefresh)
+	mux.HandleFunc("/api/logout", controllers.HandleLogout)
 	mux.HandleFunc("/api/architecture", controllers.HandleGetArchitecture)
 
 	// Protected Routes (Require JWT)

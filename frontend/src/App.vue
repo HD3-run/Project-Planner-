@@ -246,6 +246,7 @@ const saveStatus = ref({ type: '', text: '' })
 
 // Auth State
 const sessionToken = ref(localStorage.getItem('auth_token') || null)
+const refreshToken = ref(localStorage.getItem('auth_refresh_token') || null)
 const sessionEmail = ref(localStorage.getItem('auth_email') || null)
 const showAuthModal = ref(!sessionToken.value) // Automatically show login if no token
 const authMode = ref('login')
@@ -302,8 +303,10 @@ const handleAuth = async () => {
 
     const data = await res.json()
     sessionToken.value = data.token
+    refreshToken.value = data.refresh_token
     sessionEmail.value = data.email
     localStorage.setItem('auth_token', data.token)
+    localStorage.setItem('auth_refresh_token', data.refresh_token)
     localStorage.setItem('auth_email', data.email)
     
     showAuthModal.value = false
@@ -315,12 +318,28 @@ const handleAuth = async () => {
   }
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  // Notify server to revoke session
+  if (refreshToken.value) {
+    try {
+      await fetch(`${API_URL}/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken.value })
+      })
+    } catch (err) {
+      console.error("Logout notification failed", err)
+    }
+  }
+
   sessionToken.value = null
+  refreshToken.value = null
   sessionEmail.value = null
   localStorage.removeItem('auth_token')
+  localStorage.removeItem('auth_refresh_token')
   localStorage.removeItem('auth_email')
   editMode.value = false
+  showAuthModal.value = true // Force them back to login
 }
 
 const toggleCard = (id) => {
@@ -349,9 +368,47 @@ const showError = () => {
   setTimeout(() => { saveStatus.value = { type: '', text: '' } }, 3000)
 }
 
+// Custom fetch wrapper to handle token refresh
+const apiFetch = async (url, options = {}) => {
+  // Always attach current access token if not explicitly provided
+  if (!options.headers) options.headers = {}
+  if (sessionToken.value && !options.headers['Authorization']) {
+    options.headers['Authorization'] = `Bearer ${sessionToken.value}`
+  }
+
+  let res = await fetch(url, options)
+
+  // If 401 Unauthorized, try to refresh
+  if (res.status === 401 && refreshToken.value) {
+    try {
+      const refreshRes = await fetch(`${API_URL}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken.value })
+      })
+      
+      if (!refreshRes.ok) throw new Error('Refresh failed')
+      
+      const refreshData = await refreshRes.json()
+      sessionToken.value = refreshData.token
+      refreshToken.value = refreshData.refresh_token
+      localStorage.setItem('auth_token', refreshData.token)
+      localStorage.setItem('auth_refresh_token', refreshData.refresh_token)
+      
+      // Retry original request
+      options.headers['Authorization'] = `Bearer ${sessionToken.value}`
+      res = await fetch(url, options)
+    } catch (err) {
+      handleLogout() // Force logout if refresh fails
+      return res
+    }
+  }
+  return res
+}
+
 const loadData = async () => {
   try {
-    const res = await fetch(`${API_URL}/architecture`)
+    const res = await apiFetch(`${API_URL}/architecture`)
     if (!res.ok) throw new Error("Failed to load data")
     const data = await res.json()
 
@@ -417,11 +474,10 @@ const saveFeatureToDB = async (feature) => {
   }
   
   try {
-    const res = await fetch(`${API_URL}/features/update`, {
+    const res = await apiFetch(`${API_URL}/features/update`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken.value}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     })
@@ -439,11 +495,10 @@ const addFeature = async (sectionId) => {
     Subtitle: 'Describe the feature...', Capabilities: '[]', Tech: '[]', SortOrder: 99
   }
   try {
-    const res = await fetch(`${API_URL}/features/update`, {
+    const res = await apiFetch(`${API_URL}/features/update`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken.value}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     })
@@ -458,9 +513,8 @@ const addFeature = async (sectionId) => {
 const deleteFeature = async (featureId) => {
   if (!confirm('Are you sure you want to delete this feature?')) return
   try {
-    const res = await fetch(`${API_URL}/features/delete?id=${featureId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${sessionToken.value}` }
+    const res = await apiFetch(`${API_URL}/features/delete?id=${featureId}`, {
+      method: 'DELETE'
     })
     if (!res.ok) throw new Error('Failed')
     showSaved()

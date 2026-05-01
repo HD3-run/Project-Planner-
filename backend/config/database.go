@@ -31,7 +31,7 @@ func ConnectDatabase() {
 
 	// AutoMigrate applies schema updates automatically based on our struct definitions
 	log.Println("Running Auto Migrations...")
-	err = DB.AutoMigrate(&models.User{}, &models.Section{}, &models.Feature{})
+	err = DB.AutoMigrate(&models.User{}, &models.Section{}, &models.Feature{}, &models.Session{})
 	if err != nil {
 		log.Fatalf("Failed to migrate database schema: %v", err)
 	}

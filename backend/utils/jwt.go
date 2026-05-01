@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -18,15 +20,45 @@ func getJWTSecret() []byte {
 	return []byte(secret)
 }
 
-// GenerateJWT creates a signed JSON Web Token valid for 24 hours
-func GenerateJWT(userID string, email string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+// GenerateSessionID creates a fast, secure random hex string for the session ID
+func GenerateSessionID() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// GenerateTokens creates both an Access Token (15m) and Refresh Token (7d)
+func GenerateTokens(userID string, email string) (accessTokenString string, refreshTokenString string, sessionID string, err error) {
+	sessionID = GenerateSessionID()
+
+	// Access Token: 15 minutes
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   userID,
 		"email": email,
-		"exp":   time.Now().Add(time.Hour * 24).Unix(), 
+		"type":  "access",
+		"exp":   time.Now().Add(time.Minute * 15).Unix(),
 		"iat":   time.Now().Unix(),
 	})
-	return token.SignedString(getJWTSecret())
+	accessString, err := accessToken.SignedString(getJWTSecret())
+	if err != nil {
+		return "", "", "", err
+	}
+
+	// Refresh Token: 7 days
+	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":        userID,
+		"email":      email,
+		"type":       "refresh",
+		"session_id": sessionID, // Embed the DB Session ID so we can revoke it!
+		"exp":        time.Now().Add(time.Hour * 24 * 7).Unix(),
+		"iat":        time.Now().Unix(),
+	})
+	refreshString, err := refreshToken.SignedString(getJWTSecret())
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return accessString, refreshString, sessionID, nil
 }
 
 // ValidateJWT verifies the signature and expiration of a token
