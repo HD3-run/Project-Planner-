@@ -2,7 +2,9 @@
 echo "🚀 Deploying latest updates..."
 
 # 1. Pull latest code
-git pull
+git fetch origin main
+git reset --hard origin/main
+git clean -fd
 
 # 2. Update Backend
 echo "📦 Updating Backend..."
