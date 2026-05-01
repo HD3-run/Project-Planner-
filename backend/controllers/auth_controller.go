@@ -21,14 +21,18 @@ type SignupRequest struct {
 func HandleSignup(w http.ResponseWriter, r *http.Request) {
 	var req SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request format"})
 		return
 	}
 
 	// Hash password using military-grade Argon2id
 	hash, err := utils.HashPassword(req.Password)
 	if err != nil {
-		http.Error(w, "Failed to secure password", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Could not secure password"})
 		return
 	}
 
@@ -44,7 +48,9 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{"error": "User already exists or database error"})
 		return
 	}
 
@@ -82,14 +88,18 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// Lookup user
 	var user models.User
 	if err := config.DB.Where("email = ?", creds.Email).First(&user).Error; err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "No account found with this email"})
 		return
 	}
 
 	// Verify constant-time Argon2 hash
 	valid, err := utils.VerifyPassword(creds.Password, user.PasswordHash)
 	if err != nil || !valid {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Incorrect password"})
 		return
 	}
 
