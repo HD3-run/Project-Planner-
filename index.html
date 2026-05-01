@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECOMMITRA – Product Architecture</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="brand-icon">E</div>
+    <div><div class="brand-title"><span>ECOMMITRA</span></div><div class="brand-subtitle">Product Architecture</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="header-stats">
+      <div class="header-stat"><div class="header-stat-value" id="liveCount">0</div><div class="header-stat-label">Live</div></div>
+      <div class="header-stat"><div class="header-stat-value" id="plannedCount">0</div><div class="header-stat-label">Planned</div></div>
+    </div>
+    <button class="edit-toggle-btn" id="editToggle" onclick="toggleEditMode()">✏️ Edit Mode</button>
+    <div class="save-indicator" id="saveIndicator"></div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="main" id="main">
+    <div class="loading-state" id="loadingState">
+      <div class="loading-spinner"></div>
+      <p>Loading from Supabase...</p>
+    </div>
+  </main>
+</div>
+
+<script src="supabase-client.js?v=2"></script>
+<script src="app.js?v=2"></script>
+</body>
+</html>
