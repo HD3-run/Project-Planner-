@@ -233,7 +233,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { supabase } from './supabase'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
 const sections = ref([])
 const loading = ref(true)
@@ -244,7 +245,8 @@ const activeSection = ref('')
 const saveStatus = ref({ type: '', text: '' })
 
 // Auth State
-const session = ref(null)
+const sessionToken = ref(localStorage.getItem('auth_token') || null)
+const sessionEmail = ref(localStorage.getItem('auth_email') || null)
 const showAuthModal = ref(false)
 const authMode = ref('login')
 const authEmail = ref('')
@@ -257,13 +259,13 @@ let saveTimeouts = {}
 // Computed stats
 const liveCount = computed(() => {
   let count = 0
-  sections.value.forEach(s => s.features?.forEach(f => { if(f.status === 'live') count++ }))
+  sections.value.forEach(s => s.Features?.forEach(f => { if(f.Status === 'live') count++ }))
   return count
 })
 
 const plannedCount = computed(() => {
   let count = 0
-  sections.value.forEach(s => s.features?.forEach(f => { if(f.status !== 'live') count++ }))
+  sections.value.forEach(s => s.Features?.forEach(f => { if(f.Status !== 'live') count++ }))
   return count
 })
 
@@ -275,7 +277,7 @@ const completionPercentage = computed(() => {
 
 // Methods
 const toggleEditMode = () => { 
-  if (!session.value && !editMode.value) {
+  if (!sessionToken.value && !editMode.value) {
     showAuthModal.value = true
     return
   }
@@ -286,13 +288,23 @@ const handleAuth = async () => {
   authLoading.value = true
   authError.value = ''
   try {
-    let res;
-    if (authMode.value === 'signup') {
-      res = await supabase.auth.signUp({ email: authEmail.value, password: authPassword.value })
-    } else {
-      res = await supabase.auth.signInWithPassword({ email: authEmail.value, password: authPassword.value })
+    const endpoint = authMode.value === 'signup' ? '/signup' : '/login'
+    const res = await fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: authEmail.value, password: authPassword.value })
+    })
+    
+    if (!res.ok) {
+      const errText = await res.text()
+      throw new Error(errText)
     }
-    if (res.error) throw res.error
+
+    const data = await res.json()
+    sessionToken.value = data.token
+    sessionEmail.value = data.email
+    localStorage.setItem('auth_token', data.token)
+    localStorage.setItem('auth_email', data.email)
     
     showAuthModal.value = false
     editMode.value = true
@@ -303,8 +315,11 @@ const handleAuth = async () => {
   }
 }
 
-const handleLogout = async () => {
-  await supabase.auth.signOut()
+const handleLogout = () => {
+  sessionToken.value = null
+  sessionEmail.value = null
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('auth_email')
   editMode.value = false
 }
 
@@ -336,19 +351,30 @@ const showError = () => {
 
 const loadData = async () => {
   try {
-    const [secRes, featRes] = await Promise.all([
-      supabase.from('sections').select('*').order('sort_order'),
-      supabase.from('features').select('*').order('sort_order')
-    ])
-    if (secRes.error) throw secRes.error
-    if (featRes.error) throw featRes.error
+    const res = await fetch(`${API_URL}/architecture`)
+    if (!res.ok) throw new Error("Failed to load data")
+    const data = await res.json()
 
-    sections.value = secRes.data.map(s => ({
-      ...s,
-      features: featRes.data.filter(f => f.section_id === s.id).map(f => ({
-        ...f,
-        tech: typeof f.tech === 'string' ? JSON.parse(f.tech) : (f.tech || []),
-        capabilities: typeof f.capabilities === 'string' ? JSON.parse(f.capabilities) : (f.capabilities || [])
+    // Map GORM PascalCase structs to our Vue component expectation
+    sections.value = data.map(s => ({
+      id: s.ID,
+      title: s.Title,
+      icon: s.Icon,
+      color: s.Color,
+      description: s.Description,
+      sort_order: s.SortOrder,
+      Features: (s.Features || []).map(f => ({
+        id: f.ID,
+        section_id: f.SectionID,
+        title: f.Title,
+        icon: f.Icon,
+        status: f.Status,
+        subtitle: f.Subtitle,
+        impact: f.Impact,
+        how_it_works: f.HowItWorks,
+        approach: f.Approach,
+        tech: typeof f.Tech === 'string' ? JSON.parse(f.Tech) : (f.Tech || []),
+        capabilities: typeof f.Capabilities === 'string' ? JSON.parse(f.Capabilities) : (f.Capabilities || [])
       }))
     }))
   } catch (err) {
@@ -377,40 +403,74 @@ const updateCapabilities = (feature, val) => {
 }
 
 const saveFeatureToDB = async (feature) => {
-  const dbUpdates = {
-    title: feature.title, subtitle: feature.subtitle, status: feature.status,
-    how_it_works: feature.how_it_works, approach: feature.approach, impact: feature.impact,
-    tech: JSON.stringify(feature.tech || []), capabilities: JSON.stringify(feature.capabilities || [])
+  const payload = {
+    ID: feature.id,
+    SectionID: feature.section_id,
+    Title: feature.title,
+    Subtitle: feature.subtitle,
+    Status: feature.status,
+    HowItWorks: feature.how_it_works,
+    Approach: feature.approach,
+    Impact: feature.impact,
+    Tech: JSON.stringify(feature.tech || []),
+    Capabilities: JSON.stringify(feature.capabilities || [])
   }
-  const { error } = await supabase.from('features').update(dbUpdates).eq('id', feature.id)
-  if (error) { console.error(error); showError(); } else { showSaved(); }
+  
+  try {
+    const res = await fetch(`${API_URL}/features/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken.value}`
+      },
+      body: JSON.stringify(payload)
+    })
+    if (!res.ok) throw new Error('Failed')
+    showSaved()
+  } catch (err) {
+    console.error(err)
+    showError()
+  }
 }
 
 const addFeature = async (sectionId) => {
-  const newFeat = {
-    section_id: sectionId, title: 'New Feature', icon: '✨', status: 'planned',
-    subtitle: 'Describe the feature...', capabilities: '[]', tech: '[]', sort_order: 99
+  const payload = {
+    SectionID: sectionId, Title: 'New Feature', Icon: '✨', Status: 'planned',
+    Subtitle: 'Describe the feature...', Capabilities: '[]', Tech: '[]', SortOrder: 99
   }
-  const { error } = await supabase.from('features').insert(newFeat)
-  if (error) { showError(); return; }
-  showSaved(); loadData()
+  try {
+    const res = await fetch(`${API_URL}/features/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken.value}`
+      },
+      body: JSON.stringify(payload)
+    })
+    if (!res.ok) throw new Error('Failed')
+    showSaved()
+    loadData()
+  } catch (err) {
+    showError()
+  }
 }
 
 const deleteFeature = async (featureId) => {
   if (!confirm('Are you sure you want to delete this feature?')) return
-  const { error } = await supabase.from('features').delete().eq('id', featureId)
-  if (error) { showError(); return; }
-  showSaved(); loadData()
+  try {
+    const res = await fetch(`${API_URL}/features/delete?id=${featureId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${sessionToken.value}` }
+    })
+    if (!res.ok) throw new Error('Failed')
+    showSaved()
+    loadData()
+  } catch (err) {
+    showError()
+  }
 }
 
 onMounted(() => { 
   loadData() 
-  supabase.auth.getSession().then(({ data }) => {
-    session.value = data.session
-  })
-  supabase.auth.onAuthStateChange((_event, _session) => {
-    session.value = _session
-    if (!_session) editMode.value = false
-  })
 })
 </script>
