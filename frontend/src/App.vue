@@ -39,9 +39,13 @@ const filteredSections = computed(() => {
     ...s,
     features: (s.features || []).filter(f => {
       const tech = Array.isArray(f.tech) ? f.tech : []
+      const q = searchQuery.value.toLowerCase()
       const matchesSearch = !searchQuery.value || 
-        f.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        tech.some(t => typeof t === 'string' && t.toLowerCase().includes(searchQuery.value.toLowerCase()))
+        s.title.toLowerCase().includes(q) ||
+        f.title.toLowerCase().includes(q) ||
+        (f.subtitle || '').toLowerCase().includes(q) ||
+        (f.impact || '').toLowerCase().includes(q) ||
+        tech.some(t => typeof t === 'string' && t.toLowerCase().includes(q))
       const matchesStatus = statusFilter.value === 'all' || f.status === statusFilter.value
       return matchesSearch && matchesStatus
     })
