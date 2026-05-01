@@ -79,3 +79,40 @@ npm run dev
 ## Accessing the App
 - **Frontend App:** http://localhost:5173
 - **Backend API:** http://localhost:8080
+
+## Production Deployment (Linux Server)
+
+To deploy the application on a Linux server (like an AWS EC2 or Bitnami instance), we use [PM2](https://pm2.keymetrics.io/) to keep both the frontend and backend running continuously in the background.
+
+**1. Install Go and Pull the Code**
+Your server needs the Go programming language to run the backend.
+```bash
+sudo apt update
+sudo apt install golang -y
+
+# Make sure your code is up to date
+git pull
+```
+
+**2. Build the Frontend**
+Vite requires you to build the static files before serving them in production.
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+**3. Start PM2**
+Use the provided `ecosystem.config.js` file to start both servers automatically.
+```bash
+# If you don't have PM2 installed globally, run: sudo npm install -g pm2
+pm2 start ecosystem.config.js
+```
+
+**4. Save PM2 State (Optional)**
+If you want the applications to start automatically if your server ever reboots:
+```bash
+pm2 save
+pm2 startup
+```

@@ -22,7 +22,7 @@ module.exports = {
       name: 'ecommitra-frontend',
       cwd: './frontend',
       script: 'npm',
-      args: 'run preview', // Make sure to run `npm run build` in the frontend directory before starting PM2!
+      args: 'run preview -- --host', // Added --host to make it accessible remotely
       instances: 1,
       autorestart: true,
       watch: false,
