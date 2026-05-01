@@ -119,11 +119,11 @@ const loadData = async () => {
     const res = await apiFetch(`${API_URL}/architecture`)
     const data = await res.json()
     sections.value = data.map(s => ({
-      id: s.ID, title: s.Title, icon: s.Icon, color: s.Color, description: s.Description,
-      features: (s.Features || []).map(f => ({
-        id: f.ID, section_id: f.SectionID, title: f.Title, status: f.Status, subtitle: f.Subtitle,
-        impact: f.Impact, how_works: f.HowItWorks, approach: f.Approach,
-        tech: Array.isArray(f.Tech) ? f.Tech : JSON.parse(f.Tech || '[]')
+      id: s.id, title: s.title, icon: s.icon, color: s.color, description: s.description,
+      features: (s.features || []).map(f => ({
+        id: f.id, section_id: f.section_id, title: f.title, status: f.status, subtitle: f.subtitle,
+        impact: f.impact, how_it_works: f.how_it_works, approach: f.approach,
+        tech: Array.isArray(f.tech) ? f.tech : JSON.parse(f.tech || '[]')
       }))
     }))
   } catch (err) { console.error(err) }
@@ -131,18 +131,31 @@ const loadData = async () => {
 
 // BABA Editing Power
 const saveFeature = async (feature) => {
-  if (!isBaba.value) return
+  if (!isBaba.value) {
+    console.warn('Save blocked: User is not a BABA.')
+    return
+  }
   isUpdating.value = true
+  console.log('Syncing feature to DB:', feature)
+  
   try {
-    await apiFetch(`${API_URL}/architecture/feature`, {
+    const res = await apiFetch(`${API_URL}/architecture/feature`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...feature,
+        id: Number(feature.id),
+        section_id: String(feature.section_id),
         tech: JSON.stringify(feature.tech)
       })
     })
-  } catch (err) { console.error(err) }
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Save failed')
+    console.log('Feature synced successfully:', data)
+  } catch (err) { 
+    console.error('Persistence Error:', err.message)
+    alert('Save Failed: ' + err.message)
+  }
   finally { isUpdating.value = false }
 }
 
@@ -155,7 +168,7 @@ const addFeature = (sectionId) => {
     status: 'planned',
     tech: ['Node.js'],
     subtitle: 'Describe this feature...',
-    impact: '', how_works: '', approach: ''
+    impact: '', how_it_works: '', approach: ''
   }
   section.features.push(newFeat)
   editMode.value = true
@@ -324,8 +337,8 @@ onMounted(() => {
                     <div style="margin-top: 20px;">
                       <span v-if="editMode" class="edit-label">Logic & Architecture</span>
                       <h5 v-else>Logic & Architecture</h5>
-                      <textarea v-if="editMode" v-model="feat.how_works" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
-                      <p v-else class="detail-text">{{ feat.how_works || 'Logic contained in core services.' }}</p>
+                      <textarea v-if="editMode" v-model="feat.how_it_works" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
+                      <p v-else class="detail-text">{{ feat.how_it_works || 'Logic contained in core services.' }}</p>
                     </div>
                   </div>
                   <div class="detail-section">

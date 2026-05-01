@@ -34,20 +34,26 @@ func HandleUpdateFeature(w http.ResponseWriter, r *http.Request) {
 
 	var feature models.Feature
 	if err := json.NewDecoder(r.Body).Decode(&feature); err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON: " + err.Error()})
 		return
 	}
 
 	if feature.ID == 0 {
 		// New Feature
 		if err := config.DB.Create(&feature).Error; err != nil {
-			http.Error(w, "Failed to create feature", http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "DB Create Error: " + err.Error()})
 			return
 		}
 	} else {
-		// Existing Feature
+		// Existing Feature - Use Save which updates all fields including those missing in JSON
 		if err := config.DB.Save(&feature).Error; err != nil {
-			http.Error(w, "Failed to update feature", http.StatusInternalServerError)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{"error": "DB Update Error: " + err.Error()})
 			return
 		}
 	}
