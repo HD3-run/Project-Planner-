@@ -30,9 +30,13 @@ func ConnectDatabase() {
 
 	log.Println("Database connection established successfully.")
 
-	// Run migrations in background so server starts immediately
+	// 1. Mandatory deduplication of features (Run this FIRST before migrations)
+	log.Println("🧹 Step 1: Cleaning up any existing duplicate features...")
+	DB.Exec("DELETE FROM features a USING features b WHERE a.id < b.id AND a.title = b.title AND a.section_id = b.section_id")
+
+	// 2. MIGRATE & SEED (Background)
 	go func() {
-		log.Println("🚀 Running Auto Migrations in background...")
+		log.Println("🚀 Step 2: Running Auto Migrations in background...")
 		err := DB.AutoMigrate(&models.User{}, &models.Section{}, &models.Feature{}, &models.Session{})
 		if err != nil {
 			log.Printf("⚠️ Background migration error: %v", err)
@@ -45,10 +49,6 @@ func ConnectDatabase() {
 
 // seedInitialData ensures the database isn't completely empty on first launch
 func seedInitialData() {
-	// 1. Mandatory Cleanup of existing duplicates
-	log.Println("Cleaning up any existing duplicate features...")
-	DB.Exec("DELETE FROM features a USING features b WHERE a.id < b.id AND a.title = b.title AND a.section_id = b.section_id")
-
 	var count int64
 	DB.Model(&models.Section{}).Count(&count)
 	
