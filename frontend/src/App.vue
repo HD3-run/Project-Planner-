@@ -294,25 +294,41 @@ onMounted(() => {
                     <button v-if="editMode && isBaba" @click.stop="deleteFeature(feat.id, section.id)" class="btn-del">×</button>
                   </div>
                 </div>
-                <textarea v-if="editMode" v-model="feat.subtitle" @blur="saveFeature(feat)" class="edit-textarea-sub"></textarea>
+                <!-- Card Subtitle Edit -->
+                <div v-if="editMode" style="margin-top: 12px;">
+                  <span class="edit-label">Short Description</span>
+                  <textarea v-model="feat.subtitle" @blur="saveFeature(feat)" class="edit-textarea-sub"></textarea>
+                </div>
                 <p v-else class="feature-subtitle">{{ feat.subtitle }}</p>
 
                 <div v-if="expandedCards.includes(feat.id) || editMode" class="card-details">
                   <div class="detail-section">
-                    <h5>Business Impact</h5>
+                    <span v-if="editMode" class="edit-label">Business Impact</span>
+                    <h5 v-else>Business Impact</h5>
                     <textarea v-if="editMode" v-model="feat.impact" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
                     <p v-else class="detail-text">{{ feat.impact || 'Standard platform capability.' }}</p>
-                    <h5 style="margin-top: 20px;">Logic & Architecture</h5>
-                    <textarea v-if="editMode" v-model="feat.how_works" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
-                    <p v-else class="detail-text">{{ feat.how_works || 'Logic contained in core services.' }}</p>
+                    
+                    <div style="margin-top: 20px;">
+                      <span v-if="editMode" class="edit-label">Logic & Architecture</span>
+                      <h5 v-else>Logic & Architecture</h5>
+                      <textarea v-if="editMode" v-model="feat.how_works" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
+                      <p v-else class="detail-text">{{ feat.how_works || 'Logic contained in core services.' }}</p>
+                    </div>
                   </div>
                   <div class="detail-section">
-                    <h5>Tech Stack</h5>
-                    <input v-if="editMode" :value="JSON.stringify(feat.tech)" @blur="e => { try { feat.tech = JSON.parse(e.target.value); saveFeature(feat) } catch(e){} }" class="edit-input-tech" />
-                    <div v-else class="tech-chips"><span v-for="t in feat.tech" :key="t" class="tech-chip">{{ t }}</span></div>
-                    <h5 style="margin-top: 20px;">Implementation</h5>
-                    <textarea v-if="editMode" v-model="feat.approach" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
-                    <p v-else class="detail-text" style="font-size: 13px;">{{ feat.approach || 'Standard approach.' }}</p>
+                    <span v-if="editMode" class="edit-label">Tech Stack (JSON Array)</span>
+                    <h5 v-else>Tech Stack</h5>
+                    <input v-if="editMode" :value="JSON.stringify(feat.tech)" @blur="e => { try { feat.tech = JSON.parse(e.target.value); saveFeature(feat) } catch(err){} }" class="edit-input-tech" />
+                    <div v-else class="tech-chips">
+                      <span v-for="t in feat.tech" :key="t" class="tech-chip">{{ t }}</span>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                      <span v-if="editMode" class="edit-label">Implementation Approach</span>
+                      <h5 v-else>Implementation Approach</h5>
+                      <textarea v-if="editMode" v-model="feat.approach" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
+                      <p v-else class="detail-text" style="font-size: 13px;">{{ feat.approach || 'Standard approach.' }}</p>
+                    </div>
                   </div>
                 </div>
               </div>
