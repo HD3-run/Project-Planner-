@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"ecommitra-backend/controllers"
@@ -19,9 +20,19 @@ func SetupRouter() *http.ServeMux {
 	mux.HandleFunc("/api/architecture", controllers.HandleGetArchitecture)
 
 	// Protected Routes (Require JWT)
-	// We wrap the controller functions in the RequireAuth middleware
-	mux.HandleFunc("/api/features/update", middleware.RequireAuth(controllers.HandleUpdateFeature))
-	mux.HandleFunc("/api/features/delete", middleware.RequireAuth(controllers.HandleDeleteFeature))
+	// Consolidating all Feature operations to a single clean endpoint
+	mux.HandleFunc("/api/architecture/feature", middleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			controllers.HandleUpdateFeature(w, r)
+		case http.MethodDelete:
+			controllers.HandleDeleteFeature(w, r)
+		default:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"})
+		}
+	}))
 
 	return mux
 }
