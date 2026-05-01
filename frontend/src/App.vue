@@ -23,6 +23,9 @@
           <div class="progress-text">{{ completionPercentage }}% Live</div>
         </div>
         
+        <button v-if="session" class="btn-primary" style="background: transparent; color: var(--text-muted); box-shadow: none; border: 1px solid var(--border-light);" @click="handleLogout">
+          Logout
+        </button>
         <button class="btn-primary" :class="{ active: editMode }" @click="toggleEditMode">
           <svg v-if="!editMode" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
           <svg v-else width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
@@ -195,6 +198,36 @@
       {{ saveStatus.text }}
     </div>
 
+    <!-- Auth Modal -->
+    <div v-if="showAuthModal" class="auth-modal-overlay" @click.self="showAuthModal = false">
+      <div class="auth-modal">
+        <h3>{{ authMode === 'login' ? 'Welcome Back' : 'Create Account' }}</h3>
+        <p class="auth-subtitle">Sign in to edit the architecture roadmap.</p>
+        
+        <div v-if="authError" class="auth-error">{{ authError }}</div>
+
+        <form @submit.prevent="handleAuth" class="auth-form">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" v-model="authEmail" class="editable-input" required placeholder="admin@example.com" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" v-model="authPassword" class="editable-input" required placeholder="••••••••" />
+          </div>
+          
+          <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 8px;" :disabled="authLoading">
+            {{ authLoading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Sign Up') }}
+          </button>
+        </form>
+
+        <div class="auth-switch">
+          <span v-if="authMode === 'login'">Don't have an account? <a href="#" @click.prevent="authMode = 'signup'">Sign up</a></span>
+          <span v-else>Already have an account? <a href="#" @click.prevent="authMode = 'login'">Sign in</a></span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -209,6 +242,15 @@ const editMode = ref(false)
 const expandedCards = ref([])
 const activeSection = ref('')
 const saveStatus = ref({ type: '', text: '' })
+
+// Auth State
+const session = ref(null)
+const showAuthModal = ref(false)
+const authMode = ref('login')
+const authEmail = ref('')
+const authPassword = ref('')
+const authError = ref('')
+const authLoading = ref(false)
 
 let saveTimeouts = {}
 
@@ -232,7 +274,39 @@ const completionPercentage = computed(() => {
 })
 
 // Methods
-const toggleEditMode = () => { editMode.value = !editMode.value }
+const toggleEditMode = () => { 
+  if (!session.value && !editMode.value) {
+    showAuthModal.value = true
+    return
+  }
+  editMode.value = !editMode.value 
+}
+
+const handleAuth = async () => {
+  authLoading.value = true
+  authError.value = ''
+  try {
+    let res;
+    if (authMode.value === 'signup') {
+      res = await supabase.auth.signUp({ email: authEmail.value, password: authPassword.value })
+    } else {
+      res = await supabase.auth.signInWithPassword({ email: authEmail.value, password: authPassword.value })
+    }
+    if (res.error) throw res.error
+    
+    showAuthModal.value = false
+    editMode.value = true
+  } catch (err) {
+    authError.value = err.message
+  } finally {
+    authLoading.value = false
+  }
+}
+
+const handleLogout = async () => {
+  await supabase.auth.signOut()
+  editMode.value = false
+}
 
 const toggleCard = (id) => {
   if (expandedCards.value.includes(id)) {
@@ -329,5 +403,14 @@ const deleteFeature = async (featureId) => {
   showSaved(); loadData()
 }
 
-onMounted(() => { loadData() })
+onMounted(() => { 
+  loadData() 
+  supabase.auth.getSession().then(({ data }) => {
+    session.value = data.session
+  })
+  supabase.auth.onAuthStateChange((_event, _session) => {
+    session.value = _session
+    if (!_session) editMode.value = false
+  })
+})
 </script>

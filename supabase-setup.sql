@@ -47,14 +47,22 @@ DROP TRIGGER IF EXISTS features_updated ON features;
 CREATE TRIGGER features_updated BEFORE UPDATE ON features
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- 4. Enable RLS but allow public read/write (for this internal tool)
+-- 4. Enable RLS and secure it for authenticated users only
 ALTER TABLE sections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE features ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies to prevent 'already exists' errors
+DROP POLICY IF EXISTS "Allow public read sections" ON sections;
+DROP POLICY IF EXISTS "Allow public write sections" ON sections;
+DROP POLICY IF EXISTS "Allow public read features" ON features;
+DROP POLICY IF EXISTS "Allow public write features" ON features;
+
+-- Create secure policies: Public can read, but only authenticated users can write
 CREATE POLICY "Allow public read sections" ON sections FOR SELECT USING (true);
-CREATE POLICY "Allow public write sections" ON sections FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated write sections" ON sections FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+
 CREATE POLICY "Allow public read features" ON features FOR SELECT USING (true);
-CREATE POLICY "Allow public write features" ON features FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated write features" ON features FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
 
 -- 5. Indexes
 CREATE INDEX IF NOT EXISTS idx_features_section ON features(section_id);
