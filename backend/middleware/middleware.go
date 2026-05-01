@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -22,7 +23,9 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		
 		// Ensure the header exists and starts with "Bearer "
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "Unauthorized: Missing or malformed token", http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: Missing or malformed token"})
 			return
 		}
 
@@ -31,7 +34,9 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		// Validate using our secure JWT utility
 		claims, err := utils.ValidateJWT(tokenString)
 		if err != nil {
-			http.Error(w, "Unauthorized: "+err.Error(), http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: " + err.Error()})
 			return
 		}
 
@@ -44,7 +49,9 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		// STATEFUL CHECK: Verify the session still exists in the DB
 		var session models.Session
 		if err := config.DB.Where("id = ? AND expires_at > ?", sessionID, time.Now()).First(&session).Error; err != nil {
-			http.Error(w, "Unauthorized: Session has been revoked or expired", http.StatusUnauthorized)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized: Session has been revoked or is invalid. Please login again."})
 			return
 		}
 
