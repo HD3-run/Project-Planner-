@@ -91,10 +91,15 @@ h1, h2, h3, h4, h5 { font-weight: 800; letter-spacing: -0.02em; }
 .brand-info h1 { font-size: 18px; color: var(--text-dark); line-height: 1; }
 .brand-info p { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
 
-/* Search Bar */
-.search-container {
-  position: relative; width: 100%; max-width: 480px;
-}
+/* Search & Filter Cluster */
+.search-and-filter { display: flex; align-items: center; gap: 16px; width: 100%; max-width: 700px; }
+.search-container { flex: 1; position: relative; }
+
+.status-filter-group { display: flex; background: rgba(255,255,255,0.5); padding: 4px; border-radius: 12px; border: 1px solid var(--border-light); }
+.filter-pill { border: none; background: transparent; padding: 6px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+.filter-pill:hover { color: var(--text-dark); }
+.filter-pill.active { background: white; color: var(--brand-primary); box-shadow: var(--shadow-sm); }
+
 .search-input {
   width: 100%; background: #f1f5f9; border: 1.5px solid transparent;
   padding: 10px 16px 10px 44px; border-radius: 14px;

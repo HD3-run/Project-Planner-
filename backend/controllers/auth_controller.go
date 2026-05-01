@@ -110,6 +110,9 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SINGLE SESSION ENFORCEMENT: Kill all existing sessions for this user before creating a new one
+	config.DB.Where("user_id = ?", user.ID).Delete(&models.Session{})
+
 	// Create session record
 	session := models.Session{
 		ID:        sessionID,

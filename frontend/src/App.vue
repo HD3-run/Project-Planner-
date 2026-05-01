@@ -38,9 +38,10 @@ const filteredSections = computed(() => {
   return sections.value.map(s => ({
     ...s,
     features: (s.features || []).filter(f => {
+      const tech = Array.isArray(f.tech) ? f.tech : []
       const matchesSearch = !searchQuery.value || 
         f.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        (f.tech || []).some(t => t.toLowerCase().includes(searchQuery.value.toLowerCase()))
+        tech.some(t => typeof t === 'string' && t.toLowerCase().includes(searchQuery.value.toLowerCase()))
       const matchesStatus = statusFilter.value === 'all' || f.status === statusFilter.value
       return matchesSearch && matchesStatus
     })
@@ -201,9 +202,17 @@ onMounted(() => {
       </div>
 
       <div v-if="sessionToken" class="header-center">
-        <div class="search-container">
-          <svg class="search-icon-svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <input type="text" v-model="searchQuery" class="search-input" placeholder="Search architecture..." />
+        <div class="search-and-filter">
+          <div class="search-container">
+            <svg class="search-icon-svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" v-model="searchQuery" class="search-input" placeholder="Search architecture..." />
+          </div>
+
+          <div class="status-filter-group">
+            <button v-for="s in ['all', 'live', 'planned', 'future']" :key="s" @click="statusFilter = s" class="filter-pill" :class="{ active: statusFilter === s }">
+              {{ s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1) }}
+            </button>
+          </div>
         </div>
       </div>
 

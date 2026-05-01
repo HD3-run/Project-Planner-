@@ -33,12 +33,13 @@ func GenerateTokens(userID string, email string, role string) (accessTokenString
 
 	// Access Token: 15 minutes
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":   userID,
-		"email": email,
-		"role":  role,
-		"type":  "access",
-		"exp":   time.Now().Add(time.Minute * 15).Unix(),
-		"iat":   time.Now().Unix(),
+		"sub":        userID,
+		"email":      email,
+		"role":       role,
+		"session_id": sessionID, // Added for stateful revocation!
+		"type":       "access",
+		"exp":        time.Now().Add(time.Minute * 15).Unix(),
+		"iat":        time.Now().Unix(),
 	})
 	accessString, err := accessToken.SignedString(getJWTSecret())
 	if err != nil {

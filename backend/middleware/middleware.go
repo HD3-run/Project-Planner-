@@ -4,6 +4,9 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
+	"ecommitra-backend/config"
+	"ecommitra-backend/models"
 	"ecommitra-backend/utils"
 )
 
@@ -34,12 +37,19 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 
 		// Inject email and role into context
 		ctx := r.Context()
-		if email, ok := claims["email"].(string); ok {
-			ctx = context.WithValue(ctx, UserContextKey, email)
+		email, _ := claims["email"].(string)
+		role, _ := claims["role"].(string)
+		sessionID, _ := claims["session_id"].(string)
+
+		// STATEFUL CHECK: Verify the session still exists in the DB
+		var session models.Session
+		if err := config.DB.Where("id = ? AND expires_at > ?", sessionID, time.Now()).First(&session).Error; err != nil {
+			http.Error(w, "Unauthorized: Session has been revoked or expired", http.StatusUnauthorized)
+			return
 		}
-		if role, ok := claims["role"].(string); ok {
-			ctx = context.WithValue(ctx, RoleContextKey, role)
-		}
+
+		ctx = context.WithValue(ctx, UserContextKey, email)
+		ctx = context.WithValue(ctx, RoleContextKey, role)
 		r = r.WithContext(ctx)
 
 		// Pass execution to the next handler
