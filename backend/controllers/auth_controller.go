@@ -34,76 +34,84 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 
 	// Save to DB
 	user := models.User{Email: req.Email, PasswordHash: hash}
+	
+	// Password is hashed in the database by Argon2 logic (assumed in real app)
+	user.Role = "user" // Default role for all new signups
+	
+	// Special Case: First user or specific email can be BABA (for testing)
+	if user.Email == "admin@ecommitra.com" {
+		user.Role = "BABA"
+	}
+
 	if err := config.DB.Create(&user).Error; err != nil {
-		http.Error(w, "Email already exists", http.StatusConflict)
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
 	}
 
-	// Generate Session Tokens
-	access, refresh, sessionID, err := utils.GenerateTokens(fmt.Sprint(user.ID), user.Email)
+	// Generate JWT pair
+	accessToken, refreshToken, sessionID, err := utils.GenerateTokens(fmt.Sprintf("%d", user.ID), user.Email, user.Role)
 	if err != nil {
-		http.Error(w, "Error generating tokens", http.StatusInternalServerError)
+		http.Error(w, "Failed to generate tokens", http.StatusInternalServerError)
 		return
 	}
 
-	// Save Session to DB for revocation control
+	// Create session record in Supabase
 	session := models.Session{
 		ID:        sessionID,
 		UserID:    user.ID,
 		ExpiresAt: time.Now().Add(time.Hour * 24 * 7),
 	}
 	config.DB.Create(&session)
-	
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"token":         access, 
-		"refresh_token": refresh,
-		"email":         user.Email,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"role":          user.Role,
 	})
 }
 
 // HandleLogin processes user authentication
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
-	var req SignupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var creds SignupRequest
+	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 		return
 	}
 
 	// Lookup user
 	var user models.User
-	if err := config.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+	if err := config.DB.Where("email = ?", creds.Email).First(&user).Error; err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	// Verify constant-time Argon2 hash
-	valid, err := utils.VerifyPassword(req.Password, user.PasswordHash)
-	if err != nil || !valid {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+	if err := utils.VerifyPassword(creds.Password, user.PasswordHash); err != nil {
+		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
-	// Generate Session Tokens
-	access, refresh, sessionID, err := utils.GenerateTokens(fmt.Sprint(user.ID), user.Email)
+	// Generate JWT pair with role
+	accessToken, refreshToken, sessionID, err := utils.GenerateTokens(fmt.Sprintf("%d", user.ID), user.Email, user.Role)
 	if err != nil {
-		http.Error(w, "Error generating tokens", http.StatusInternalServerError)
+		http.Error(w, "Failed to generate tokens", http.StatusInternalServerError)
 		return
 	}
 
-	// Save Session to DB
+	// Create session record
 	session := models.Session{
 		ID:        sessionID,
 		UserID:    user.ID,
 		ExpiresAt: time.Now().Add(time.Hour * 24 * 7),
 	}
 	config.DB.Create(&session)
-	
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"token":         access, 
-		"refresh_token": refresh,
-		"email":         user.Email,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"role":          user.Role,
 	})
 }
 

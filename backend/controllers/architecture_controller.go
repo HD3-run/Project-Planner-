@@ -6,6 +6,7 @@ import (
 
 	"ecommitra-backend/config"
 	"ecommitra-backend/models"
+	"ecommitra-backend/middleware"
 )
 
 // HandleGetArchitecture fetches all sections and their nested features
@@ -24,6 +25,13 @@ func HandleGetArchitecture(w http.ResponseWriter, r *http.Request) {
 
 // HandleUpdateFeature creates or updates a feature in the roadmap
 func HandleUpdateFeature(w http.ResponseWriter, r *http.Request) {
+	// Security Check: Only BABA can edit
+	role, _ := r.Context().Value(middleware.RoleContextKey).(string)
+	if role != "BABA" {
+		http.Error(w, "Access Denied: Only the BABA can modify the architecture.", http.StatusForbidden)
+		return
+	}
+
 	var feature models.Feature
 	if err := json.NewDecoder(r.Body).Decode(&feature); err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
@@ -50,6 +58,13 @@ func HandleUpdateFeature(w http.ResponseWriter, r *http.Request) {
 
 // HandleDeleteFeature removes a feature by ID
 func HandleDeleteFeature(w http.ResponseWriter, r *http.Request) {
+	// Security Check: Only BABA can delete
+	role, _ := r.Context().Value(middleware.RoleContextKey).(string)
+	if role != "BABA" {
+		http.Error(w, "Access Denied: Only the BABA can modify the architecture.", http.StatusForbidden)
+		return
+	}
+
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		http.Error(w, "Missing Feature ID", http.StatusBadRequest)

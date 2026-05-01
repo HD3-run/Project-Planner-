@@ -1,427 +1,59 @@
-<template>
-  <div class="app-wrapper">
-    <!-- Ambient Animated Background -->
-    <div class="ambient-bg"></div>
-    <div class="ambient-glow-1"></div>
-    <div class="ambient-glow-2"></div>
-
-    <!-- Sticky Header -->
-    <header class="header">
-      <div class="brand">
-        <div class="brand-icon">E</div>
-        <div class="brand-text">
-          <h1>ECOMMITRA</h1>
-          <p>Product Architecture</p>
-        </div>
-      </div>
-
-      <div class="header-controls">
-        <div class="search-box">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <input v-model="searchQuery" placeholder="Search architecture..." />
-        </div>
-
-        <div class="filter-pills">
-          <button @click="statusFilter = 'all'" :class="{ active: statusFilter === 'all' }">All</button>
-          <button @click="statusFilter = 'live'" :class="{ active: statusFilter === 'live' }">Live</button>
-          <button @click="statusFilter = 'planned'" :class="{ active: statusFilter === 'planned' }">Planned</button>
-        </div>
-
-        <div class="view-switcher">
-          <button @click="activeView = 'list'" :class="{ active: activeView === 'list' }">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            List
-          </button>
-          <button @click="activeView = 'map'" :class="{ active: activeView === 'map' }">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-            Map
-          </button>
-        </div>
-
-        <div class="progress-container" title="Platform Completion">
-          <div class="progress-bar-wrap">
-            <div class="progress-bar" :style="{ width: completionPercentage + '%' }"></div>
-          </div>
-          <div class="progress-text">{{ completionPercentage }}% Live</div>
-        </div>
-        
-        <button v-if="session" class="btn-primary" style="background: transparent; color: var(--text-muted); box-shadow: none; border: 1px solid var(--border-light);" @click="handleLogout">
-          Logout
-        </button>
-        <button class="btn-primary" :class="{ active: editMode }" @click="toggleEditMode">
-          <svg v-if="!editMode" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-          <svg v-else width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-          {{ editMode ? 'Lock Architecture' : 'Edit Architecture' }}
-        </button>
-      </div>
-    </header>
-
-    <div class="layout">
-    <aside class="sidebar">
-      <div class="sidebar-label">Navigation Topics</div>
-      <nav class="sidebar-nav">
-        <a v-for="section in sections" :key="'nav-'+section.id" class="nav-link" :class="{ active: activeSection === section.id }" @click.prevent="scrollTo(section.id)">
-          <span class="nav-icon">{{ section.icon }}</span>
-          {{ section.title }}
-          <span class="nav-count">{{ section.features?.length || 0 }}</span>
-        </a>
-      </nav>
-    </aside>
-
-      <!-- Main Content Area -->
-      <main class="main-content">
-        
-        <div v-if="loading" class="loader-view">
-          <div class="spinner"></div>
-          <p style="margin-top: 16px; font-weight: 600; color: var(--text-muted);">Syncing with Supabase...</p>
-        </div>
-
-        <div v-else-if="error" class="loader-view">
-          <p style="color: #ef4444; font-weight: 700;">❌ Connection Error: {{ error }}</p>
-        </div>
-
-        <div v-else>
-          <!-- Hero Banner -->
-          <div class="hero">
-            <h2>The Blueprint of <span>ECOMMITRA</span></h2>
-            <p>An interactive map of our technical infrastructure, live capabilities, and future roadmap.</p>
-          </div>
-
-          <!-- Mind Map Visualization -->
-          <div v-if="activeView === 'map'" class="visual-map-wrapper">
-            <div class="tree-container" v-if="sections.length">
-              <div class="tree-root">🌍 PLATFORM CORE</div>
-              <div class="tree-branches" :style="'--bcount: ' + sections.length">
-                
-                <div v-for="sec in sections" :key="'tree-'+sec.id" class="tree-branch">
-                  <div class="tree-section-node" :style="`border-top-color: ${sec.color}`" @click="scrollTo(sec.id)">
-                    <span>{{ sec.icon }}</span> {{ sec.title }}
-                  </div>
-                  
-                  <div class="tree-features-spine">
-                    <div v-for="feat in sec.features" :key="'tfeat-'+feat.id" class="tree-feature-node" :class="feat.status">
-                      {{ feat.title }}
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-            <div v-else class="loader-view">No data to map.</div>
-          </div>
-
-          <!-- Sections List -->
-          <div v-if="activeView === 'list'">
-            <div v-for="section in filteredSections" :key="section.id" :id="section.id" class="section">
-            
-            <div class="section-header">
-              <div class="section-title-wrap">
-                <div class="section-icon-large" :style="`color: ${section.color}`">{{ section.icon }}</div>
-                <div>
-                  <h3 class="section-title">{{ section.title }}</h3>
-                  <p class="section-desc">{{ section.description || section.desc }}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Features -->
-            <div v-for="feature in section.features" :key="feature.id" class="feature-card" :class="{ 'is-expanded': expandedCards.includes(feature.id) }">
-              
-              <div class="card-header" @click="toggleCard(feature.id)">
-                <div class="card-icon-box" :style="`color: ${section.color}`">{{ feature.icon }}</div>
-                
-                <div class="card-info">
-                  <div class="card-title-row">
-                    <div class="card-title">
-                      <input v-if="editMode" v-model="feature.title" class="editable-input" @click.stop @input="debouncedUpdate(feature)" style="width: 250px; padding: 4px 8px;" />
-                      <template v-else>{{ feature.title }}</template>
-                    </div>
-                    
-                    <select v-if="editMode" v-model="feature.status" class="editable-select" @click.stop @change="updateStatus(feature)" style="width: 120px; padding: 4px 8px; font-weight: 700;">
-                      <option value="live">LIVE</option>
-                      <option value="planned">PLANNED</option>
-                      <option value="future">FUTURE</option>
-                    </select>
-                    <span v-else class="status-badge" :class="feature.status">{{ feature.status }}</span>
-                  </div>
-                  
-                  <div class="card-subtitle">
-                    <input v-if="editMode" v-model="feature.subtitle" class="editable-input" @click.stop @input="debouncedUpdate(feature)" style="width: 100%; padding: 4px 8px;" />
-                    <template v-else>{{ feature.subtitle }}</template>
-                  </div>
-                </div>
-
-                <button v-if="editMode" @click.stop="deleteFeature(feature.id)" class="btn-primary" style="background: #fee2e2; color: #ef4444; box-shadow: none;">Delete</button>
-                
-                <div class="card-chevron">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path></svg>
-                </div>
-              </div>
-
-              <!-- Card Details -->
-              <div class="card-body" :style="{ maxHeight: expandedCards.includes(feature.id) ? '2000px' : '0' }">
-                <div class="card-body-inner">
-                  
-                  <!-- Business Impact (Highlight) -->
-                  <div class="detail-block highlight" style="margin-bottom: 24px;" v-if="editMode || feature.impact">
-                    <div class="detail-label"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Business Impact</div>
-                    <textarea v-if="editMode" v-model="feature.impact" class="editable-textarea" @input="debouncedUpdate(feature)"></textarea>
-                    <div v-else class="detail-text">{{ feature.impact }}</div>
-                  </div>
-
-                  <div class="details-grid">
-                    <!-- How It Works -->
-                    <div class="detail-block">
-                      <div class="detail-label"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg> How It Works</div>
-                      <textarea v-if="editMode" v-model="feature.how_it_works" class="editable-textarea" @input="debouncedUpdate(feature)"></textarea>
-                      <div v-else class="detail-text">{{ feature.how_it_works || 'No description provided.' }}</div>
-                    </div>
-
-                    <!-- Approach -->
-                    <div class="detail-block">
-                      <div class="detail-label"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg> Implementation Approach</div>
-                      <textarea v-if="editMode" v-model="feature.approach" class="editable-textarea" @input="debouncedUpdate(feature)"></textarea>
-                      <div v-else class="detail-text">{{ feature.approach || 'No technical approach provided.' }}</div>
-                    </div>
-                  </div>
-
-                  <!-- Tech Stack & Capabilities -->
-                  <div class="details-grid">
-                    <div class="detail-block" v-if="editMode || (feature.tech && feature.tech.length)">
-                      <div class="detail-label">Tech Stack</div>
-                      <input v-if="editMode" :value="(feature.tech || []).join(', ')" class="editable-input" @input="e => updateTech(feature, e.target.value)" placeholder="Vue, Node, PostgreSQL..." />
-                      <div v-else class="tech-stack">
-                        <span v-for="t in feature.tech" :key="t" class="tech-pill">{{ t }}</span>
-                      </div>
-                    </div>
-
-                    <div class="detail-block" v-if="editMode || (feature.capabilities && feature.capabilities.length)">
-                      <div class="detail-label">Key Capabilities</div>
-                      <textarea v-if="editMode" :value="(feature.capabilities || []).join('\n')" class="editable-textarea" @input="e => updateCapabilities(feature, e.target.value)" placeholder="One per line..."></textarea>
-                      <ul v-else class="capability-list">
-                        <li v-for="c in feature.capabilities" :key="c">{{ c }}</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-
-            <button v-if="editMode" class="btn-add" @click="addFeature(section.id)">
-              + Add Feature to {{ section.title }}
-            </button>
-          </div>
-        </div>
-
-      </div>
-    </main>
-    </div>
-
-    <!-- Toast Notification -->
-    <div v-if="saveStatus.text" class="save-status" :style="{ color: saveStatus.type === 'error' ? '#ef4444' : '#10b981' }">
-      {{ saveStatus.text }}
-    </div>
-
-    <!-- Auth Modal -->
-    <div v-if="showAuthModal" class="auth-modal-overlay">
-      <div class="auth-modal">
-        <h3>{{ authMode === 'login' ? 'Welcome Back' : 'Create Account' }}</h3>
-        <p class="auth-subtitle">Sign in to edit the architecture roadmap.</p>
-        
-        <div v-if="authError" class="auth-error">{{ authError }}</div>
-
-        <form @submit.prevent="handleAuth" class="auth-form">
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" v-model="authEmail" class="editable-input" required placeholder="admin@example.com" />
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" v-model="authPassword" class="editable-input" required placeholder="••••••••" />
-          </div>
-          
-          <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px; margin-top: 8px;" :disabled="authLoading">
-            {{ authLoading ? 'Please wait...' : (authMode === 'login' ? 'Sign In' : 'Sign Up') }}
-          </button>
-        </form>
-
-        <div class="auth-switch">
-          <span v-if="authMode === 'login'">Don't have an account? <a href="#" @click.prevent="authMode = 'signup'">Sign up</a></span>
-          <span v-else>Already have an account? <a href="#" @click.prevent="authMode = 'login'">Sign in</a></span>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</template>
-
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://52.66.60.75:8080/api'
+const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080/api' : '/api'
 
+// UI & Auth State
 const sections = ref([])
-const loading = ref(true)
-const error = ref(null)
-const editMode = ref(false)
+const activeSection = ref(null)
 const expandedCards = ref([])
-const activeSection = ref('')
-const saveStatus = ref({ type: '', text: '' })
-const searchQuery = ref('')
-const statusFilter = ref('all') // all, live, planned, future
-const activeView = ref('list') // 'list' or 'map'
-
-// Auth State
-const sessionToken = ref(localStorage.getItem('auth_token') || null)
-const refreshToken = ref(localStorage.getItem('auth_refresh_token') || null)
-const sessionEmail = ref(localStorage.getItem('auth_email') || null)
-const showAuthModal = ref(!sessionToken.value) // Automatically show login if no token
+const showAuthModal = ref(false)
 const authMode = ref('login')
 const authEmail = ref('')
 const authPassword = ref('')
 const authError = ref('')
-const authLoading = ref(false)
+const searchQuery = ref('')
+const statusFilter = ref('all')
+const activeView = ref('list')
+const editMode = ref(false)
+const isUpdating = ref(false)
 
-let saveTimeouts = {}
+// Token State
+const sessionToken = ref(localStorage.getItem('auth_token') || null)
+const refreshToken = ref(localStorage.getItem('auth_refresh_token') || null)
+const userRole = ref(localStorage.getItem('auth_role') || 'user')
 
-// Computed stats
-const liveCount = computed(() => {
-  let count = 0
-  sections.value.forEach(s => s.features?.forEach(f => { if(f.status === 'live') count++ }))
-  return count
-})
+const isBaba = computed(() => userRole.value === 'BABA')
 
-const plannedCount = computed(() => {
-  let count = 0
-  sections.value.forEach(s => s.features?.forEach(f => { if(f.status !== 'live') count++ }))
-  return count
-})
-
+// Stats
 const completionPercentage = computed(() => {
-  const total = liveCount.value + plannedCount.value
-  if(total === 0) return 0
-  return Math.round((liveCount.value / total) * 100)
+  if (!sections.value.length) return 0
+  const allFeatures = sections.value.flatMap(s => s.features || [])
+  if (!allFeatures.length) return 0
+  const liveCount = allFeatures.filter(f => f.status === 'live').length
+  return Math.round((liveCount / allFeatures.length) * 100)
 })
 
 const filteredSections = computed(() => {
-  if (!searchQuery.value && statusFilter.value === 'all') return sections.value
-
-  return sections.value.map(s => {
-    const filteredFeatures = (s.features || []).filter(f => {
+  return sections.value.map(s => ({
+    ...s,
+    features: (s.features || []).filter(f => {
       const matchesSearch = !searchQuery.value || 
-                          f.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                          f.subtitle.toLowerCase().includes(searchQuery.value.toLowerCase())
+        f.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+        (f.tech || []).some(t => t.toLowerCase().includes(searchQuery.value.toLowerCase()))
       const matchesStatus = statusFilter.value === 'all' || f.status === statusFilter.value
       return matchesSearch && matchesStatus
     })
-    return { ...s, features: filteredFeatures }
-  }).filter(s => s.features.length > 0)
+  })).filter(s => s.features.length > 0 || !searchQuery.value)
 })
 
-// Methods
-const toggleEditMode = () => { 
-  if (!sessionToken.value && !editMode.value) {
-    showAuthModal.value = true
-    return
-  }
-  editMode.value = !editMode.value 
-}
-
-const handleAuth = async () => {
-  authLoading.value = true
-  authError.value = ''
-  try {
-    const endpoint = authMode.value === 'signup' ? '/signup' : '/login'
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: authEmail.value, password: authPassword.value })
-    })
-    
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(errText)
-    }
-
-    const data = await res.json()
-    sessionToken.value = data.token
-    refreshToken.value = data.refresh_token
-    sessionEmail.value = data.email
-    localStorage.setItem('auth_token', data.token)
-    localStorage.setItem('auth_refresh_token', data.refresh_token)
-    localStorage.setItem('auth_email', data.email)
-    
-    showAuthModal.value = false
-    editMode.value = true
-  } catch (err) {
-    authError.value = err.message
-  } finally {
-    authLoading.value = false
-  }
-}
-
-const handleLogout = async () => {
-  // Notify server to revoke session
-  if (refreshToken.value) {
-    try {
-      await fetch(`${API_URL}/logout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken.value })
-      })
-    } catch (err) {
-      console.error("Logout notification failed", err)
-    }
-  }
-
-  sessionToken.value = null
-  refreshToken.value = null
-  sessionEmail.value = null
-  localStorage.removeItem('auth_token')
-  localStorage.removeItem('auth_refresh_token')
-  localStorage.removeItem('auth_email')
-  editMode.value = false
-  showAuthModal.value = true // Force them back to login
-}
-
-const toggleCard = (id) => {
-  if (expandedCards.value.includes(id)) {
-    expandedCards.value = expandedCards.value.filter(i => i !== id)
-  } else {
-    expandedCards.value.push(id)
-  }
-}
-
-const scrollTo = (id) => {
-  activeSection.value = id
-  const el = document.getElementById(id)
-  if(el) {
-    const y = el.getBoundingClientRect().top + window.scrollY - 120
-    window.scrollTo({top: y, behavior: 'smooth'})
-  }
-}
-
-const showSaved = () => { 
-  saveStatus.value = { type: 'saved', text: '✅ Changes Saved' }
-  setTimeout(() => { saveStatus.value = { type: '', text: '' } }, 2000)
-}
-const showError = () => { 
-  saveStatus.value = { type: 'error', text: '❌ Failed to save' }
-  setTimeout(() => { saveStatus.value = { type: '', text: '' } }, 3000)
-}
-
-// Custom fetch wrapper to handle token refresh
+// API Logic
 const apiFetch = async (url, options = {}) => {
-  // Always attach current access token if not explicitly provided
   if (!options.headers) options.headers = {}
-  if (sessionToken.value && !options.headers['Authorization']) {
-    options.headers['Authorization'] = `Bearer ${sessionToken.value}`
-  }
+  if (sessionToken.value) options.headers['Authorization'] = `Bearer ${sessionToken.value}`
 
   let res = await fetch(url, options)
 
-  // If 401 Unauthorized, try to refresh
   if (res.status === 401 && refreshToken.value) {
     try {
       const refreshRes = await fetch(`${API_URL}/refresh`, {
@@ -429,171 +61,272 @@ const apiFetch = async (url, options = {}) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken.value })
       })
-      
+      const data = await refreshRes.json()
       if (!refreshRes.ok) throw new Error('Refresh failed')
-      
-      const refreshData = await refreshRes.json()
-      sessionToken.value = refreshData.token
-      refreshToken.value = refreshData.refresh_token
-      localStorage.setItem('auth_token', refreshData.token)
-      localStorage.setItem('auth_refresh_token', refreshData.refresh_token)
-      
-      // Retry original request
+      sessionToken.value = data.access_token
+      userRole.value = data.role
+      localStorage.setItem('auth_token', data.access_token)
+      localStorage.setItem('auth_role', data.role)
       options.headers['Authorization'] = `Bearer ${sessionToken.value}`
       res = await fetch(url, options)
-    } catch (err) {
-      handleLogout() // Force logout if refresh fails
-      return res
-    }
+    } catch (err) { handleLogout() }
   }
   return res
 }
 
+const handleAuth = async () => {
+  authError.value = ''
+  try {
+    const res = await fetch(`${API_URL}/${authMode.value}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: authEmail.value, password: authPassword.value })
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Auth failed')
+    
+    sessionToken.value = data.access_token
+    refreshToken.value = data.refresh_token
+    userRole.value = data.role
+    localStorage.setItem('auth_token', data.access_token)
+    localStorage.setItem('auth_refresh_token', data.refresh_token)
+    localStorage.setItem('auth_role', data.role)
+    
+    showAuthModal.value = false
+    loadData()
+  } catch (err) { authError.value = err.message }
+}
+
+const handleLogout = () => {
+  sessionToken.value = null
+  refreshToken.value = null
+  userRole.value = 'user'
+  localStorage.clear()
+  showAuthModal.value = true 
+}
+
 const loadData = async () => {
+  if (!sessionToken.value) return
   try {
     const res = await apiFetch(`${API_URL}/architecture`)
-    if (!res.ok) throw new Error("Failed to load data")
     const data = await res.json()
-
-    // Map GORM PascalCase structs to our Vue component expectation
     sections.value = data.map(s => ({
-      id: s.ID,
-      title: s.Title,
-      icon: s.Icon,
-      color: s.Color,
-      description: s.Description,
-      sort_order: s.SortOrder,
-      features: (s.Features || []).map(f => {
-        // Robust JSON parsing for arrays stored as strings
-        const parseArray = (val) => {
-          if (!val) return []
-          if (Array.isArray(val)) return val
-          try {
-            const parsed = JSON.parse(val)
-            return Array.isArray(parsed) ? parsed : []
-          } catch (e) {
-            // If it's a plain string like "Vue, Go", convert to array
-            return val.split(',').map(s => s.trim()).filter(Boolean)
-          }
-        }
-
-        const parseLines = (val) => {
-          if (!val) return []
-          if (Array.isArray(val)) return val
-          try {
-            const parsed = JSON.parse(val)
-            return Array.isArray(parsed) ? parsed : []
-          } catch (e) {
-            return val.split('\n').map(s => s.trim()).filter(Boolean)
-          }
-        }
-
-        return {
-          id: f.ID,
-          section_id: f.SectionID,
-          title: f.Title,
-          icon: f.Icon,
-          status: f.Status,
-          subtitle: f.Subtitle,
-          impact: f.Impact,
-          how_it_works: f.HowItWorks,
-          approach: f.Approach,
-          tech: parseArray(f.Tech),
-          capabilities: parseLines(f.Capabilities)
-        }
-      })
+      id: s.ID, title: s.Title, icon: s.Icon, color: s.Color, description: s.Description,
+      features: (s.Features || []).map(f => ({
+        id: f.ID, section_id: f.SectionID, title: f.Title, status: f.Status, subtitle: f.Subtitle,
+        impact: f.Impact, how_works: f.HowItWorks, approach: f.Approach,
+        tech: Array.isArray(f.Tech) ? f.Tech : JSON.parse(f.Tech || '[]')
+      }))
     }))
-  } catch (err) {
-    error.value = err.message
-  } finally {
-    loading.value = false
-  }
+  } catch (err) { console.error(err) }
 }
 
-// Updates
-const debouncedUpdate = (feature) => {
-  if (saveTimeouts[feature.id]) clearTimeout(saveTimeouts[feature.id])
-  saveTimeouts[feature.id] = setTimeout(() => { saveFeatureToDB(feature) }, 800)
-}
-
-const updateStatus = (feature) => saveFeatureToDB(feature)
-
-const updateTech = (feature, val) => {
-  feature.tech = val.split(',').map(s => s.trim()).filter(Boolean)
-  debouncedUpdate(feature)
-}
-
-const updateCapabilities = (feature, val) => {
-  feature.capabilities = val.split('\n').filter(s => s.trim())
-  debouncedUpdate(feature)
-}
-
-const saveFeatureToDB = async (feature) => {
-  const payload = {
-    ID: feature.id,
-    SectionID: feature.section_id,
-    Title: feature.title,
-    Subtitle: feature.subtitle,
-    Status: feature.status,
-    HowItWorks: feature.how_it_works,
-    Approach: feature.approach,
-    Impact: feature.impact,
-    Tech: JSON.stringify(feature.tech || []),
-    Capabilities: JSON.stringify(feature.capabilities || [])
-  }
-  
+// BABA Editing Power
+const saveFeature = async (feature) => {
+  if (!isBaba.value) return
+  isUpdating.value = true
   try {
-    const res = await apiFetch(`${API_URL}/features/update`, {
+    await apiFetch(`${API_URL}/architecture/feature`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...feature,
+        tech: JSON.stringify(feature.tech)
+      })
     })
-    if (!res.ok) throw new Error('Failed')
-    showSaved()
-  } catch (err) {
-    console.error(err)
-    showError()
-  }
+  } catch (err) { console.error(err) }
+  finally { isUpdating.value = false }
 }
 
-const addFeature = async (sectionId) => {
-  const payload = {
-    SectionID: sectionId, Title: 'New Feature', Icon: '✨', Status: 'planned',
-    Subtitle: 'Describe the feature...', Capabilities: '[]', Tech: '[]', SortOrder: 99
+const addFeature = (sectionId) => {
+  if (!isBaba.value) return
+  const section = sections.value.find(s => s.id === sectionId)
+  const newFeat = {
+    section_id: sectionId,
+    title: 'New Feature',
+    status: 'planned',
+    tech: ['Node.js'],
+    subtitle: 'Describe this feature...',
+    impact: '', how_works: '', approach: ''
   }
+  section.features.push(newFeat)
+  editMode.value = true
+}
+
+const deleteFeature = async (id, sectionId) => {
+  if (!isBaba.value || !confirm('Delete this feature?')) return
   try {
-    const res = await apiFetch(`${API_URL}/features/update`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
-    if (!res.ok) throw new Error('Failed')
-    showSaved()
-    loadData()
-  } catch (err) {
-    showError()
-  }
+    await apiFetch(`${API_URL}/architecture/feature?id=${id}`, { method: 'DELETE' })
+    const section = sections.value.find(s => s.id === sectionId)
+    section.features = section.features.filter(f => f.id !== id)
+  } catch (err) { console.error(err) }
 }
 
-const deleteFeature = async (featureId) => {
-  if (!confirm('Are you sure you want to delete this feature?')) return
-  try {
-    const res = await apiFetch(`${API_URL}/features/delete?id=${featureId}`, {
-      method: 'DELETE'
-    })
-    if (!res.ok) throw new Error('Failed')
-    showSaved()
-    loadData()
-  } catch (err) {
-    showError()
-  }
+const toggleCard = (id) => {
+  if (editMode.value) return // Don't collapse during editing
+  expandedCards.value = expandedCards.value.includes(id) 
+    ? expandedCards.value.filter(i => i !== id) 
+    : [...expandedCards.value, id]
 }
 
-onMounted(() => { 
-  loadData() 
+const scrollTo = (id) => {
+  activeSection.value = id
+  activeView.value = 'list'
+  setTimeout(() => {
+    const el = document.getElementById(id)
+    if(el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 120, behavior: 'smooth' })
+  }, 50)
+}
+
+onMounted(() => {
+  if (!sessionToken.value) showAuthModal.value = true
+  else loadData()
 })
 </script>
+
+<template>
+  <div class="app-container">
+    <div class="ambient-bg"><div class="glow-1"></div><div class="glow-2"></div></div>
+
+    <header class="top-nav">
+      <div class="brand-wrap">
+        <div class="brand-logo">E</div>
+        <div class="brand-info"><h1>ECOMMITRA</h1><p>Product Architecture</p></div>
+      </div>
+
+      <div v-if="sessionToken" class="search-container">
+        <svg class="search-icon-svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" v-model="searchQuery" class="search-input" placeholder="Search architecture..." />
+      </div>
+
+      <div class="header-actions" v-if="sessionToken">
+        <!-- BABA Edit Toggle -->
+        <button v-if="isBaba" @click="editMode = !editMode" class="btn-edit-toggle" :class="{ active: editMode }">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          <span>{{ editMode ? 'Finish Editing' : 'Edit Architecture' }}</span>
+        </button>
+
+        <div class="view-toggle">
+          <button @click="activeView = 'list'" class="view-btn" :class="{ active: activeView === 'list' }">List</button>
+          <button @click="activeView = 'map'" class="view-btn" :class="{ active: activeView === 'map' }">Map</button>
+        </div>
+
+        <div class="progress-ring-wrap">
+          <div class="ring-bar-bg"><div class="ring-bar-fill" :style="{ width: completionPercentage + '%' }"></div></div>
+          <span class="ring-text">{{ completionPercentage }}% LIVE</span>
+        </div>
+
+        <button @click="handleLogout" class="btn-logout" title="Logout"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg></button>
+      </div>
+    </header>
+
+    <div v-if="sessionToken" class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-section-label">Navigation</div>
+        <nav class="sidebar-nav">
+          <div v-for="s in filteredSections" :key="'nav-'+s.id" class="nav-item" :class="{ active: activeSection === s.id }" @click="scrollTo(s.id)">
+            <span>{{ s.icon }}</span><span class="nav-label">{{ s.title }}</span><span class="nav-badge">{{ s.features.length }}</span>
+          </div>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <!-- List View -->
+        <div v-if="activeView === 'list'">
+          <div v-for="section in filteredSections" :key="section.id" :id="section.id" class="section-block">
+            <div class="section-header">
+              <div class="section-title-wrap">
+                <div class="section-icon-dot" :style="{ backgroundColor: section.color }"></div>
+                <h3>{{ section.title }}</h3>
+                <button v-if="editMode && isBaba" @click="addFeature(section.id)" class="btn-add-feat">+ Add Feature</button>
+              </div>
+              <p class="detail-text" style="margin-top: 8px; opacity: 0.7;">{{ section.description }}</p>
+            </div>
+
+            <div class="features-grid">
+              <div v-for="feat in section.features" :key="feat.id || 'new'" class="feature-card" :class="{ editing: editMode }" @click="toggleCard(feat.id)">
+                <!-- Card Header -->
+                <div class="card-top">
+                  <div class="card-title-group">
+                    <div class="feature-icon-box">{{ section.icon }}</div>
+                    <input v-if="editMode" v-model="feat.title" @blur="saveFeature(feat)" class="edit-input-title" />
+                    <h4 v-else>{{ feat.title }}</h4>
+                  </div>
+                  
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <select v-if="editMode" v-model="feat.status" @change="saveFeature(feat)" class="edit-select">
+                      <option value="live">Live</option>
+                      <option value="planned">Planned</option>
+                      <option value="future">Future</option>
+                    </select>
+                    <span v-else class="status-pill" :class="feat.status">{{ feat.status }}</span>
+                    
+                    <button v-if="editMode && isBaba" @click.stop="deleteFeature(feat.id, section.id)" class="btn-del">×</button>
+                  </div>
+                </div>
+
+                <!-- Card Subtitle -->
+                <textarea v-if="editMode" v-model="feat.subtitle" @blur="saveFeature(feat)" class="edit-textarea-sub"></textarea>
+                <p v-else class="feature-subtitle">{{ feat.subtitle }}</p>
+
+                <!-- Expanded Details (Always show if editing) -->
+                <div v-if="expandedCards.includes(feat.id) || editMode" class="card-details">
+                  <div class="detail-section">
+                    <h5>Business Impact</h5>
+                    <textarea v-if="editMode" v-model="feat.impact" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
+                    <p v-else class="detail-text">{{ feat.impact || 'Standard platform capability.' }}</p>
+                    
+                    <h5 style="margin-top: 20px;">Logic & Architecture</h5>
+                    <textarea v-if="editMode" v-model="feat.how_works" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
+                    <p v-else class="detail-text">{{ feat.how_works || 'Logic contained in core services.' }}</p>
+                  </div>
+                  
+                  <div class="detail-section">
+                    <h5>Tech Stack (JSON Array)</h5>
+                    <input v-if="editMode" :value="JSON.stringify(feat.tech)" @blur="e => { feat.tech = JSON.parse(e.target.value); saveFeature(feat) }" class="edit-input-tech" />
+                    <div v-else class="tech-chips">
+                      <span v-for="t in feat.tech" :key="t" class="tech-chip">{{ t }}</span>
+                    </div>
+
+                    <h5 style="margin-top: 20px;">Implementation Approach</h5>
+                    <textarea v-if="editMode" v-model="feat.approach" @blur="saveFeature(feat)" class="edit-textarea-detail"></textarea>
+                    <p v-else class="detail-text" style="font-size: 13px;">{{ feat.approach || 'Standard approach.' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Elite Auth Modal -->
+    <div v-if="showAuthModal" class="modal-backdrop">
+      <div class="modal-content">
+        <div class="brand-logo" style="margin: 0 auto 24px;">E</div>
+        <h3>{{ authMode === 'login' ? 'BABA Authentication' : 'Member Registration' }}</h3>
+        <p>Access the ECOMMITRA architecture blueprints.</p>
+        <div v-if="authError" class="auth-error">{{ authError }}</div>
+        <form @submit.prevent="handleAuth">
+          <div class="input-group"><label>Email</label><input type="email" v-model="authEmail" class="elite-input" required /></div>
+          <div class="input-group"><label>Password</label><input type="password" v-model="authPassword" class="elite-input" required /></div>
+          <button type="submit" class="btn-primary">{{ authMode === 'login' ? 'Unlock Access' : 'Register' }}</button>
+        </form>
+        <div style="margin-top: 24px; text-align: center;"><a href="#" @click.prevent="authMode = authMode === 'login' ? 'signup' : 'login'" style="color: var(--brand-primary); font-size: 14px; font-weight: 700;">{{ authMode === 'login' ? 'Switch to Registration' : 'Return to Login' }}</a></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style>
+.btn-edit-toggle { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 13px; color: var(--text-dark); cursor: pointer; transition: 0.3s; }
+.btn-edit-toggle.active { background: var(--brand-primary); color: white; border-color: var(--brand-primary); box-shadow: var(--brand-glow); }
+.btn-add-feat { margin-left: auto; background: var(--status-live); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 800; font-size: 11px; cursor: pointer; }
+.edit-input-title { flex: 1; border: 1px solid var(--brand-primary); padding: 4px 8px; border-radius: 6px; font-size: 18px; font-weight: 700; font-family: inherit; }
+.edit-select { border: 1px solid var(--border-light); padding: 4px; border-radius: 6px; font-weight: 800; font-size: 11px; }
+.edit-textarea-sub { width: 100%; border: 1px solid var(--border-light); border-radius: 6px; padding: 8px; margin-bottom: 12px; font-family: inherit; font-size: 14px; }
+.edit-textarea-detail { width: 100%; border: 1px solid var(--border-light); border-radius: 6px; padding: 8px; min-height: 80px; font-family: inherit; font-size: 13px; }
+.edit-input-tech { width: 100%; border: 1px solid var(--border-light); border-radius: 6px; padding: 4px 8px; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+.btn-del { background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; width: 24px; height: 24px; border-radius: 6px; font-weight: 800; cursor: pointer; }
+.auth-error { background: #fef2f2; color: #ef4444; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; font-weight: 700; text-align: center; }
+</style>

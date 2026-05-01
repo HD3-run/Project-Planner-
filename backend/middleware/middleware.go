@@ -10,6 +10,7 @@ import (
 // Define a custom type for context keys to avoid collisions
 type ContextKey string
 const UserContextKey ContextKey = "userEmail"
+const RoleContextKey ContextKey = "userRole"
 
 // RequireAuth is a middleware that intercepts incoming requests, verifies the JWT, and injects user context
 func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -31,12 +32,15 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Extract the email and pass it down the context chain
-		email, ok := claims["email"].(string)
-		if ok {
-			ctx := context.WithValue(r.Context(), UserContextKey, email)
-			r = r.WithContext(ctx)
+		// Inject email and role into context
+		ctx := r.Context()
+		if email, ok := claims["email"].(string); ok {
+			ctx = context.WithValue(ctx, UserContextKey, email)
 		}
+		if role, ok := claims["role"].(string); ok {
+			ctx = context.WithValue(ctx, RoleContextKey, role)
+		}
+		r = r.WithContext(ctx)
 
 		// Pass execution to the next handler
 		next.ServeHTTP(w, r)
