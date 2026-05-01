@@ -22,7 +22,7 @@ module.exports = {
       name: 'ecommitra-frontend',
       cwd: './frontend',
       script: 'npm',
-      args: 'run preview -- --host', // Added --host to make it accessible remotely
+      args: 'run preview -- --host --port 5173', // Forced port to match firewall
       instances: 1,
       autorestart: true,
       watch: false,
