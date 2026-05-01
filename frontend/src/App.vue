@@ -420,19 +420,45 @@ const loadData = async () => {
       color: s.Color,
       description: s.Description,
       sort_order: s.SortOrder,
-      features: (s.Features || []).map(f => ({
-        id: f.ID,
-        section_id: f.SectionID,
-        title: f.Title,
-        icon: f.Icon,
-        status: f.Status,
-        subtitle: f.Subtitle,
-        impact: f.Impact,
-        how_it_works: f.HowItWorks,
-        approach: f.Approach,
-        tech: typeof f.Tech === 'string' ? JSON.parse(f.Tech) : (f.Tech || []),
-        capabilities: typeof f.Capabilities === 'string' ? JSON.parse(f.Capabilities) : (f.Capabilities || [])
-      }))
+      features: (s.Features || []).map(f => {
+        // Robust JSON parsing for arrays stored as strings
+        const parseArray = (val) => {
+          if (!val) return []
+          if (Array.isArray(val)) return val
+          try {
+            const parsed = JSON.parse(val)
+            return Array.isArray(parsed) ? parsed : []
+          } catch (e) {
+            // If it's a plain string like "Vue, Go", convert to array
+            return val.split(',').map(s => s.trim()).filter(Boolean)
+          }
+        }
+
+        const parseLines = (val) => {
+          if (!val) return []
+          if (Array.isArray(val)) return val
+          try {
+            const parsed = JSON.parse(val)
+            return Array.isArray(parsed) ? parsed : []
+          } catch (e) {
+            return val.split('\n').map(s => s.trim()).filter(Boolean)
+          }
+        }
+
+        return {
+          id: f.ID,
+          section_id: f.SectionID,
+          title: f.Title,
+          icon: f.Icon,
+          status: f.Status,
+          subtitle: f.Subtitle,
+          impact: f.Impact,
+          how_it_works: f.HowItWorks,
+          approach: f.Approach,
+          tech: parseArray(f.Tech),
+          capabilities: parseLines(f.Capabilities)
+        }
+      })
     }))
   } catch (err) {
     error.value = err.message
