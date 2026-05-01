@@ -199,7 +199,7 @@
     </div>
 
     <!-- Auth Modal -->
-    <div v-if="showAuthModal" class="auth-modal-overlay" @click.self="showAuthModal = false">
+    <div v-if="showAuthModal" class="auth-modal-overlay">
       <div class="auth-modal">
         <h3>{{ authMode === 'login' ? 'Welcome Back' : 'Create Account' }}</h3>
         <p class="auth-subtitle">Sign in to edit the architecture roadmap.</p>
