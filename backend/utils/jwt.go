@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 // getJWTSecret fetches the secret from environment, or uses a fallback for local dev
