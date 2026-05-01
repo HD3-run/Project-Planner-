@@ -259,13 +259,13 @@ let saveTimeouts = {}
 // Computed stats
 const liveCount = computed(() => {
   let count = 0
-  sections.value.forEach(s => s.Features?.forEach(f => { if(f.Status === 'live') count++ }))
+  sections.value.forEach(s => s.features?.forEach(f => { if(f.status === 'live') count++ }))
   return count
 })
 
 const plannedCount = computed(() => {
   let count = 0
-  sections.value.forEach(s => s.Features?.forEach(f => { if(f.Status !== 'live') count++ }))
+  sections.value.forEach(s => s.features?.forEach(f => { if(f.status !== 'live') count++ }))
   return count
 })
 
@@ -363,7 +363,7 @@ const loadData = async () => {
       color: s.Color,
       description: s.Description,
       sort_order: s.SortOrder,
-      Features: (s.Features || []).map(f => ({
+      features: (s.Features || []).map(f => ({
         id: f.ID,
         section_id: f.SectionID,
         title: f.Title,
