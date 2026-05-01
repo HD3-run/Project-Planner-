@@ -87,7 +87,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify constant-time Argon2 hash
-	if err := utils.VerifyPassword(creds.Password, user.PasswordHash); err != nil {
+	valid, err := utils.VerifyPassword(creds.Password, user.PasswordHash)
+	if err != nil || !valid {
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
@@ -155,8 +156,9 @@ func HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	userID := claims["sub"].(string)
 	email := claims["email"].(string)
 
-	// Issue new tokens
-	access, newRefresh, newSessionID, err := utils.GenerateTokens(userID, email)
+	// Issue new tokens with role preservation
+	role := claims["role"].(string)
+	access, newRefresh, newSessionID, err := utils.GenerateTokens(userID, email, role)
 	if err != nil {
 		http.Error(w, "Error generating new tokens", http.StatusInternalServerError)
 		return
@@ -171,9 +173,10 @@ func HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	config.DB.Create(&newSession)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"token":         access,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"access_token":  access,
 		"refresh_token": newRefresh,
+		"role":          role,
 	})
 }
 
