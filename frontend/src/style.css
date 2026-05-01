@@ -108,6 +108,23 @@ body {
 .btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); background: #1e293b; }
 .btn-primary.active { background: var(--brand-primary); box-shadow: var(--shadow-glow); }
 
+/* Search & Filters */
+.search-box {
+  display: flex; align-items: center; gap: 10px; background: #f1f5f9;
+  padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border-light);
+  width: 240px; transition: all 0.2s;
+}
+.search-box:focus-within { background: white; border-color: var(--brand-primary); box-shadow: 0 0 0 4px rgba(79,70,229,0.1); }
+.search-box input { border: none; background: transparent; font-size: 14px; font-weight: 500; color: var(--text-dark); width: 100%; outline: none; }
+.search-box svg { color: var(--text-muted); }
+
+.filter-pills { display: flex; gap: 8px; background: #f1f5f9; padding: 4px; border-radius: 14px; }
+.filter-pills button {
+  border: none; background: transparent; padding: 6px 16px; border-radius: 10px;
+  font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+}
+.filter-pills button.active { background: white; color: var(--brand-primary); box-shadow: var(--shadow-sm); }
+
 /* Main Layout */
 .layout { display: flex; margin-top: 72px; min-height: calc(100vh - 72px); }
 .sidebar {
@@ -116,6 +133,7 @@ body {
   overflow-y: auto; background: transparent;
 }
 .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
+.sidebar-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 12px; padding: 0 16px; }
 .nav-link {
   display: flex; align-items: center; gap: 12px; padding: 12px 16px;
   border-radius: 12px; color: var(--text-muted); font-weight: 600; font-size: 14px;
@@ -123,6 +141,8 @@ body {
 }
 .nav-link:hover { background: rgba(255,255,255,0.6); color: var(--text-dark); }
 .nav-link.active { background: white; color: var(--brand-primary); box-shadow: var(--shadow-sm); }
+.nav-icon { font-size: 18px; filter: grayscale(1); transition: all 0.2s; }
+.nav-link.active .nav-icon { filter: grayscale(0); }
 .nav-count { margin-left: auto; background: #e2e8f0; padding: 2px 8px; border-radius: 20px; font-size: 11px; color: var(--text-base); }
 .nav-link.active .nav-count { background: var(--brand-primary); color: white; }
 

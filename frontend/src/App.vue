@@ -16,6 +16,17 @@
       </div>
 
       <div class="header-controls">
+        <div class="search-box">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input v-model="searchQuery" placeholder="Search architecture..." />
+        </div>
+
+        <div class="filter-pills">
+          <button @click="statusFilter = 'all'" :class="{ active: statusFilter === 'all' }">All</button>
+          <button @click="statusFilter = 'live'" :class="{ active: statusFilter === 'live' }">Live</button>
+          <button @click="statusFilter = 'planned'" :class="{ active: statusFilter === 'planned' }">Planned</button>
+        </div>
+
         <div class="progress-container" title="Platform Completion">
           <div class="progress-bar-wrap">
             <div class="progress-bar" :style="{ width: completionPercentage + '%' }"></div>
@@ -35,16 +46,16 @@
     </header>
 
     <div class="layout">
-      <!-- Sidebar Navigation -->
-      <aside class="sidebar">
-        <nav class="sidebar-nav">
-          <a v-for="section in sections" :key="'nav-'+section.id" class="nav-link" :class="{ active: activeSection === section.id }" @click.prevent="scrollTo(section.id)">
-            <span>{{ section.icon }}</span>
-            {{ section.title }}
-            <span class="nav-count">{{ section.features?.length || 0 }}</span>
-          </a>
-        </nav>
-      </aside>
+    <aside class="sidebar">
+      <div class="sidebar-label">Navigation Topics</div>
+      <nav class="sidebar-nav">
+        <a v-for="section in sections" :key="'nav-'+section.id" class="nav-link" :class="{ active: activeSection === section.id }" @click.prevent="scrollTo(section.id)">
+          <span class="nav-icon">{{ section.icon }}</span>
+          {{ section.title }}
+          <span class="nav-count">{{ section.features?.length || 0 }}</span>
+        </a>
+      </nav>
+    </aside>
 
       <!-- Main Content Area -->
       <main class="main-content">
@@ -88,7 +99,7 @@
           </div>
 
           <!-- Sections -->
-          <div v-for="section in sections" :key="section.id" :id="section.id" class="section">
+          <div v-for="section in filteredSections" :key="section.id" :id="section.id" class="section">
             
             <div class="section-header">
               <div class="section-title-wrap">
@@ -243,6 +254,8 @@ const editMode = ref(false)
 const expandedCards = ref([])
 const activeSection = ref('')
 const saveStatus = ref({ type: '', text: '' })
+const searchQuery = ref('')
+const statusFilter = ref('all') // all, live, planned, future
 
 // Auth State
 const sessionToken = ref(localStorage.getItem('auth_token') || null)
@@ -274,6 +287,21 @@ const completionPercentage = computed(() => {
   const total = liveCount.value + plannedCount.value
   if(total === 0) return 0
   return Math.round((liveCount.value / total) * 100)
+})
+
+const filteredSections = computed(() => {
+  if (!searchQuery.value && statusFilter.value === 'all') return sections.value
+
+  return sections.value.map(s => {
+    const filteredFeatures = (s.features || []).filter(f => {
+      const matchesSearch = !searchQuery.value || 
+                          f.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+                          f.subtitle.toLowerCase().includes(searchQuery.value.toLowerCase())
+      const matchesStatus = statusFilter.value === 'all' || f.status === statusFilter.value
+      return matchesSearch && matchesStatus
+    })
+    return { ...s, features: filteredFeatures }
+  }).filter(s => s.features.length > 0)
 })
 
 // Methods

@@ -29,14 +29,17 @@ func ConnectDatabase() {
 
 	log.Println("Database connection established successfully.")
 
-	// AutoMigrate applies schema updates automatically based on our struct definitions
-	log.Println("Running Auto Migrations...")
-	err = DB.AutoMigrate(&models.User{}, &models.Section{}, &models.Feature{}, &models.Session{})
-	if err != nil {
-		log.Fatalf("Failed to migrate database schema: %v", err)
-	}
-
-	seedInitialData()
+	// Run migrations in background so server starts immediately
+	go func() {
+		log.Println("🚀 Running Auto Migrations in background...")
+		err := DB.AutoMigrate(&models.User{}, &models.Section{}, &models.Feature{}, &models.Session{})
+		if err != nil {
+			log.Printf("⚠️ Background migration error: %v", err)
+			return
+		}
+		seedInitialData()
+		log.Println("✅ Database Migrations & Seeding Complete.")
+	}()
 }
 
 // seedInitialData ensures the database isn't completely empty on first launch
