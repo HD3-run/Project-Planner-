@@ -82,8 +82,11 @@ const handleAuth = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: authEmail.value, password: authPassword.value })
     })
+    
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Auth failed')
+    if (!res.ok) {
+      throw new Error(data.error || 'Authentication failed')
+    }
     
     sessionToken.value = data.access_token
     refreshToken.value = data.refresh_token
