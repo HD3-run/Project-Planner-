@@ -27,6 +27,17 @@
           <button @click="statusFilter = 'planned'" :class="{ active: statusFilter === 'planned' }">Planned</button>
         </div>
 
+        <div class="view-switcher">
+          <button @click="activeView = 'list'" :class="{ active: activeView === 'list' }">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            List
+          </button>
+          <button @click="activeView = 'map'" :class="{ active: activeView === 'map' }">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+            Map
+          </button>
+        </div>
+
         <div class="progress-container" title="Platform Completion">
           <div class="progress-bar-wrap">
             <div class="progress-bar" :style="{ width: completionPercentage + '%' }"></div>
@@ -77,8 +88,8 @@
           </div>
 
           <!-- Mind Map Visualization -->
-          <div class="visual-map-wrapper" v-if="sections.length">
-            <div class="tree-container">
+          <div v-if="activeView === 'map'" class="visual-map-wrapper">
+            <div class="tree-container" v-if="sections.length">
               <div class="tree-root">🌍 PLATFORM CORE</div>
               <div class="tree-branches" :style="'--bcount: ' + sections.length">
                 
@@ -96,10 +107,12 @@
 
               </div>
             </div>
+            <div v-else class="loader-view">No data to map.</div>
           </div>
 
-          <!-- Sections -->
-          <div v-for="section in filteredSections" :key="section.id" :id="section.id" class="section">
+          <!-- Sections List -->
+          <div v-if="activeView === 'list'">
+            <div v-for="section in filteredSections" :key="section.id" :id="section.id" class="section">
             
             <div class="section-header">
               <div class="section-title-wrap">
@@ -199,9 +212,10 @@
               + Add Feature to {{ section.title }}
             </button>
           </div>
-
         </div>
-      </main>
+
+      </div>
+    </main>
     </div>
 
     <!-- Toast Notification -->
@@ -256,6 +270,7 @@ const activeSection = ref('')
 const saveStatus = ref({ type: '', text: '' })
 const searchQuery = ref('')
 const statusFilter = ref('all') // all, live, planned, future
+const activeView = ref('list') // 'list' or 'map'
 
 // Auth State
 const sessionToken = ref(localStorage.getItem('auth_token') || null)
