@@ -9,9 +9,15 @@ import (
 	"ecommitra-backend/config"
 	"ecommitra-backend/middleware"
 	"ecommitra-backend/routes"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("Note: No .env file found or error loading it, relying on system environment variables")
+	}
+
 	// 1. Initialize Database & GORM Migrations
 	config.ConnectDatabase()
 
