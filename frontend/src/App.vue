@@ -304,7 +304,7 @@ onMounted(() => {
     <div v-if="showAuthModal" class="modal-backdrop">
       <div class="modal-content">
         <div class="brand-logo" style="margin: 0 auto 24px;">E</div>
-        <h3>{{ authMode === 'login' ? 'BABA Authentication' : 'Member Registration' }}</h3>
+        <h3>{{ authMode === 'login' ? 'Authentication' : 'Member Registration' }}</h3>
         <p>Access the ECOMMITRA architecture blueprints.</p>
         <div v-if="authError" class="auth-error">{{ authError }}</div>
         <form @submit.prevent="handleAuth">
