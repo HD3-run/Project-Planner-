@@ -247,7 +247,7 @@ const saveStatus = ref({ type: '', text: '' })
 // Auth State
 const sessionToken = ref(localStorage.getItem('auth_token') || null)
 const sessionEmail = ref(localStorage.getItem('auth_email') || null)
-const showAuthModal = ref(false)
+const showAuthModal = ref(!sessionToken.value) // Automatically show login if no token
 const authMode = ref('login')
 const authEmail = ref('')
 const authPassword = ref('')
