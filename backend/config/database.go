@@ -2,21 +2,27 @@ package config
 
 import (
 	"log"
+	"os"
 	
 	"ecommitra-backend/models"
-	"github.com/glebarez/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 // DB is the global database connection instance
 var DB *gorm.DB
 
-// ConnectDatabase initializes the pure-Go SQLite database and runs migrations
+// ConnectDatabase initializes the PostgreSQL database connection and runs migrations
 func ConnectDatabase() {
 	var err error
 	
-	// Open connection to the SQLite file
-	DB, err = gorm.Open(sqlite.Open("planner.db"), &gorm.Config{})
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		log.Fatal("DATABASE_URL environment variable is not set. Please add your Supabase Postgres URI to the .env file.")
+	}
+
+	// Open connection to Supabase Postgres
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
