@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"ecommitra-backend/config"
 	"ecommitra-backend/models"
@@ -42,9 +43,15 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 	// Password is hashed in the database by Argon2 logic (assumed in real app)
 	user.Role = "user" // Default role for all new signups
 	
-	// Special Case: First user or specific email can be BABA (for testing)
-	if user.Email == "admin@ecommitra.com" {
-		user.Role = "BABA"
+	// Special Case: Specific email can be BABA (Configured in .env)
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	adminRole := os.Getenv("ADMIN_ROLE")
+	if adminRole == "" {
+		adminRole = "admin" // Default fallback
+	}
+
+	if adminEmail != "" && user.Email == adminEmail {
+		user.Role = adminRole
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {

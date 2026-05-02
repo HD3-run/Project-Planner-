@@ -23,7 +23,10 @@ const sessionToken = ref(localStorage.getItem('auth_token') || null)
 const refreshToken = ref(localStorage.getItem('auth_refresh_token') || null)
 const userRole = ref(localStorage.getItem('auth_role') || 'user')
 
-const isBaba = computed(() => userRole.value === 'BABA')
+const isBaba = computed(() => {
+  const adminRole = import.meta.env.VITE_ADMIN_ROLE || 'admin'
+  return userRole.value === adminRole
+})
 
 // Stats
 const completionPercentage = computed(() => {

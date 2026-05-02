@@ -1,118 +1,116 @@
 # Project Planner (ECOMMITRA)
 
-This project features a Vue+Vite frontend and a Golang backend. It uses Supabase as its database.
+[![Go Backend](https://img.shields.io/badge/Backend-Go_1.20+-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
+[![Vue Frontend](https://img.shields.io/badge/Frontend-Vue_3_/_Vite-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)](https://vuejs.org/)
+[![Database](https://img.shields.io/badge/Database-Supabase_Postgres-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
-## Prerequisites
+A high-performance, interactive project management and architectural planning dashboard built with a **Golang** backend and **Vue 3** frontend. This platform features real-time data visualization, AI-ready logic, and automated schema management.
 
-Before running the application, ensure you have the following installed on your machine:
-- [Node.js](https://nodejs.org/) (v16 or higher recommended) and npm
-- [Golang](https://go.dev/dl/) (v1.20 or higher recommended)
-- A [Supabase](https://supabase.com/) account and project.
+---
 
-## Environment Variables
+## 🚀 Quick Start (Automated)
 
-You need to configure the connection to your Supabase instance. If `.env` files already exist, simply update the values.
+We provide one-click scripts to launch both the frontend and backend simultaneously.
 
-**Frontend (`frontend/.env`):**
-Create or update a `.env` file in the `frontend` folder with your Supabase URL and Anon Key:
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+### **Windows**
+Double-click `start.bat` in the root directory. This will:
+1. Open a terminal for the **Backend** (port 8080).
+2. Open a terminal for the **Frontend** (port 5173).
 
-**Backend (`backend/.env`):**
-Create or update a `.env` file in the `backend` folder with your Supabase URL, Secret/Service Role Key, and Port:
-```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_SECRET_KEY=your_supabase_secret_key
-PORT=8080
-```
-
-## Database Setup
-
-1. Open your Supabase project dashboard.
-2. Navigate to the **SQL Editor**.
-3. Copy the contents of the `supabase-setup.sql` file provided in the root directory.
-4. Paste it into the SQL Editor and click **Run** to create the necessary tables and set up your database.
-
-## Running the Application
-
-### The Easy Way (Using Start Scripts)
-
-We have provided scripts to easily start both the frontend and backend servers at once.
-
-**For Windows Users:**
-Double-click `start.bat` from your file explorer, or run it in your terminal:
-```cmd
-start.bat
-```
-This will open two new command prompt windows running the frontend and backend separately.
-
-**For macOS/Linux Users:**
-Run the bash script from your terminal:
+### **macOS / Linux**
+Run the bash script:
 ```bash
 chmod +x start.sh
 ./start.sh
 ```
-This will run the backend in the background and the frontend in the foreground. Pressing `Ctrl+C` will cleanly stop both servers.
 
-### The Manual Way
+---
 
-If you prefer to start the servers manually in separate terminal windows:
+## ⚙️ Environment Configuration
 
-**1. Start the Backend (Golang)**
+Before launching, ensure your `.env` files are correctly configured.
+
+### **Backend** (`/backend/.env`)
+The backend uses **GORM** to manage the PostgreSQL connection.
+```env
+PORT=8080
+DATABASE_URL=postgresql://postgres:your_password@db.your_project.supabase.co:5432/postgres
+JWT_SECRET=your_random_string_here
+ADMIN_EMAIL=your_admin_email@example.com
+ADMIN_ROLE=BABA
+```
+
+### **Frontend** (`/frontend/.env`)
+```env
+VITE_SUPABASE_URL=https://your_project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+VITE_ADMIN_ROLE=BABA
+```
+
+---
+
+## 🗄️ Database Strategy: "Schema-on-Boot"
+
+This project utilizes **GORM Auto-Migrations**. You do **not** need to manually run SQL files or manage migrations through PGAdmin.
+
+1. **Automatic Schema Sync:** When the backend starts, it automatically inspects the `models/` directory and updates the Supabase tables to match.
+2. **Instant Seeding:** If the database is empty, the system automatically seeds the **Master ECOMMITRA Architecture Manifest**, including all core sections (Core Engine, AI Assistant, Inventory Matrix, etc.).
+3. **Manual Override (Optional):** If you need to reset the database manually, you can use the `supabase-setup.sql` provided in the root, but this is rarely necessary.
+
+---
+
+## 🛠️ Manual Execution
+
+If you prefer to run services individually:
+
+### **1. Backend (Go)**
 ```bash
 cd backend
-go mod tidy
 go run main.go
 ```
-*The backend server usually runs on http://localhost:8080*
+*Server starts at `http://localhost:8080`*
 
-**2. Start the Frontend (Vue+Vite)**
+### **2. Frontend (Vue 3)**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*The frontend server usually runs on http://localhost:5173*
+*Server starts at `http://localhost:5173`*
 
-## Accessing the App
-- **Frontend App:** http://localhost:5173
-- **Backend API:** http://localhost:8080
+---
 
-## Production Deployment (Linux Server)
+## 🌐 Production Deployment (PM2)
 
-To deploy the application on a Linux server (like an AWS EC2 or Bitnami instance), we use [PM2](https://pm2.keymetrics.io/) to keep both the frontend and backend running continuously in the background.
+For Linux servers (AWS, EC2, Bitnami), use **PM2** to manage the process lifecycle.
 
-**1. Install Go and Pull the Code**
-Your server needs the Go programming language to run the backend.
-```bash
-sudo apt update
-sudo apt install golang -y
-
-# Make sure your code is up to date
-git pull
-```
-
-**2. Build the Frontend**
-Vite requires you to build the static files before serving them in production.
+### **1. Build the Frontend**
 ```bash
 cd frontend
 npm install
 npm run build
-cd ..
 ```
 
-**3. Start PM2**
-Use the provided `ecosystem.config.js` file to start both servers automatically.
+### **2. Compile the Backend (Recommended)**
 ```bash
-# If you don't have PM2 installed globally, run: sudo npm install -g pm2
+cd backend
+go build -o ecommitra-api main.go
+```
+
+### **3. Start with PM2**
+Use the provided `ecosystem.config.js` to manage both services:
+```bash
+# Install PM2 if needed: sudo npm install -g pm2
 pm2 start ecosystem.config.js
-```
-
-**4. Save PM2 State (Optional)**
-If you want the applications to start automatically if your server ever reboots:
-```bash
 pm2 save
 pm2 startup
 ```
+
+---
+
+## 🏗️ Technical Architecture
+- **State Management:** Reactive Vue Composition API.
+- **Backend:** Standard Go `net/http` with high-performance routing.
+- **ORM:** GORM (PostgreSQL) with connection pooling.
+- **Middleware:** Custom CORS and JWT validation layers.
+- **DevOps:** PM2 process management with auto-restart and log monitoring.

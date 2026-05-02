@@ -7,6 +7,7 @@ import (
 	"ecommitra-backend/config"
 	"ecommitra-backend/models"
 	"ecommitra-backend/middleware"
+	"os"
 )
 
 // HandleGetArchitecture fetches all sections and their nested features
@@ -25,10 +26,15 @@ func HandleGetArchitecture(w http.ResponseWriter, r *http.Request) {
 
 // HandleUpdateFeature creates or updates a feature in the roadmap
 func HandleUpdateFeature(w http.ResponseWriter, r *http.Request) {
-	// Security Check: Only BABA can edit
+	// Security Check: Only Admin can edit
 	role, _ := r.Context().Value(middleware.RoleContextKey).(string)
-	if role != "BABA" {
-		http.Error(w, "Access Denied: Only the BABA can modify the architecture.", http.StatusForbidden)
+	adminRole := os.Getenv("ADMIN_ROLE")
+	if adminRole == "" {
+		adminRole = "admin"
+	}
+	
+	if role != adminRole {
+		http.Error(w, "Access Denied: Only the "+adminRole+" can modify the architecture.", http.StatusForbidden)
 		return
 	}
 
@@ -64,10 +70,15 @@ func HandleUpdateFeature(w http.ResponseWriter, r *http.Request) {
 
 // HandleDeleteFeature removes a feature by ID
 func HandleDeleteFeature(w http.ResponseWriter, r *http.Request) {
-	// Security Check: Only BABA can delete
+	// Security Check: Only Admin can delete
 	role, _ := r.Context().Value(middleware.RoleContextKey).(string)
-	if role != "BABA" {
-		http.Error(w, "Access Denied: Only the BABA can modify the architecture.", http.StatusForbidden)
+	adminRole := os.Getenv("ADMIN_ROLE")
+	if adminRole == "" {
+		adminRole = "admin"
+	}
+
+	if role != adminRole {
+		http.Error(w, "Access Denied: Only the "+adminRole+" can modify the architecture.", http.StatusForbidden)
 		return
 	}
 
